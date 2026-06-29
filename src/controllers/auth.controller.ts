@@ -61,13 +61,69 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       'SELECT id FROM customers WHERE email = $1',
       [emailLower]
     )
-    if (existing.rows.length > 0) {
-      res.status(409).json({
-        success: false,
-        message: 'An account with this email already exists. Sign in instead.',
-      })
-      return
-    }
+   if (existing.rows.length > 0) {
+  const existingCustomer = existing.rows[0]
+  
+  // If account exists but has no password (created by Shopify webhook)
+  // allow them to set a password and activate their account
+  if (!existingCustomer.password_hash) {
+    const passwordHash = await bcrypt.hash(password, 12)
+    const myReferralCode = existingCustomer.referral_code || generateReferralCode(firstName)
+    
+    await query(
+      `UPDATE customers
+       SET first_name = $1,
+           last_name = $2,
+           phone = $3,
+           password_hash = $4,
+           email_verified = true,
+           updated_at = NOW()
+       WHERE id = $5`,
+      [
+        firstName.trim(),
+        lastName.trim(),
+        phone?.trim() || null,
+        passwordHash,
+        existingCustomer.id,
+      ]
+    )
+
+    const updatedCustomer = await query(
+      'SELECT * FROM customers WHERE id = $1',
+      [existingCustomer.id]
+    )
+
+    const tokens = generateTokens({
+      customerId: existingCustomer.id,
+      email: existingCustomer.email,
+      tier: existingCustomer.tier,
+    })
+
+    // Send welcome email
+    await sendWelcomeEmail(
+      existingCustomer.email,
+      firstName,
+      existingCustomer.referral_code
+    )
+
+    res.status(200).json({
+      success: true,
+      message: 'Account activated. Your Soundhous purchase history and points are ready.',
+      data: {
+        customer: sanitize(updatedCustomer.rows[0]),
+        ...tokens,
+      },
+    })
+    return
+  }
+
+  // Account exists with a password — tell them to sign in
+  res.status(409).json({
+    success: false,
+    message: 'An account with this email already exists. Sign in instead.',
+  })
+  return
+}
 
     // Hash password
     const passwordHash = await bcrypt.hash(password, 12)
