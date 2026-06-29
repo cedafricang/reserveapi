@@ -841,7 +841,7 @@ export const verifyIkoyiMembership = async (
     // Find the club
     const clubResult = await query(
       'SELECT id FROM clubs WHERE slug = $1 AND active = true',
-      ['ikoyi-club']
+      ['ikoyi']
     )
 
     if (clubResult.rows.length === 0) {
