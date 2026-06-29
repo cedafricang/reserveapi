@@ -13,6 +13,8 @@ import adminRoutes from './routes/admin.routes'
 dotenv.config()
 
 const app = express()
+// Trust Railway's proxy
+app.set('trust proxy', 1)
 const PORT = process.env.PORT || 8080
 
 // ── Security middleware ───────────────────────────────────────
