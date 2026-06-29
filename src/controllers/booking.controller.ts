@@ -824,3 +824,60 @@ const convertTo24Hour = (time: string): string => {
   if (modifier?.toLowerCase() === 'am' && hours === 12) hours = 0
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`
 }
+
+// ── IKOYI CLUB MEMBERSHIP VERIFICATION ───────────────────────
+export const verifyIkoyiMembership = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { membershipNumber } = req.body
+
+    if (!membershipNumber) {
+      res.status(400).json({ success: false, message: 'Membership number is required.' })
+      return
+    }
+
+    // Find the club
+    const clubResult = await query(
+      'SELECT id FROM clubs WHERE slug = $1 AND active = true',
+      ['ikoyi-club']
+    )
+
+    if (clubResult.rows.length === 0) {
+      res.status(404).json({ success: false, message: 'Club partnership not active.' })
+      return
+    }
+
+    const clubId = clubResult.rows[0].id
+
+    // Find the membership
+    const memberResult = await query(
+      'SELECT * FROM club_members WHERE club_id = $1 AND membership_number ILIKE $2',
+      [clubId, membershipNumber.trim()]
+    )
+
+    if (memberResult.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: 'Membership number not found.',
+      })
+      return
+    }
+
+    const member = memberResult.rows[0]
+
+    res.status(200).json({
+      success: true,
+      message: 'Membership verified.',
+      data: {
+        membershipNumber: member.membership_number,
+        complimentaryAvailable: !member.complimentary_used,
+        discountPercent: 20,
+      },
+    })
+  } catch (err) {
+    console.error('Ikoyi verification error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
