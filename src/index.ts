@@ -27,23 +27,49 @@ app.use(cors({
 }))
 
 // ── Raw body capture for webhook signature verification ───────
-// Must come BEFORE express.json()
-app.use('/api/webhooks', (req: Request, _res: Response, next: NextFunction) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const isWebhook = req.path.startsWith('/api/webhooks')
+  
+  if (!isWebhook) {
+    next()
+    return
+  }
+
   let data = Buffer.alloc(0)
   req.on('data', (chunk: Buffer) => {
     data = Buffer.concat([data, chunk])
   })
   req.on('end', () => {
     (req as Request & { rawBody: Buffer }).rawBody = data
-    req.body = JSON.parse(data.toString() || '{}')
+    try {
+      req.body = JSON.parse(data.toString() || '{}')
+    } catch {
+      req.body = {}
+    }
     next()
+  })
+  req.on('error', (err) => {
+    console.error('Raw body read error:', err)
+    next(err)
   })
 })
 
-// ── Body parsing (for all other routes) ──────────────────────
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ extended: true }))
+// ── Body parsing (for all non-webhook routes) ─────────────────
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/api/webhooks')) {
+    next()
+    return
+  }
+  express.json({ limit: '10mb' })(req, res, next)
+})
 
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/api/webhooks')) {
+    next()
+    return
+  }
+  express.urlencoded({ extended: true })(req, res, next)
+})
 // ── Rate limiting ─────────────────────────────────────────────
 app.use(generalRateLimit)
 
