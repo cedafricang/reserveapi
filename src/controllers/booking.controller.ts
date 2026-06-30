@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid'
 import { query } from '../db'
 import { AuthRequest } from '../middleware/auth'
 import { awardPoints, checkAndUpgradeTier } from './customer.controller'
+import { sendGuestRsvpEmail } from '../utils/email'
+import crypto from 'crypto'
 
 // ── Constants ─────────────────────────────────────────────────
 const ROOM_PRICES: Record<string, number> = {
@@ -878,6 +880,187 @@ export const verifyIkoyiMembership = async (
     })
   } catch (err) {
     console.error('Ikoyi verification error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
+
+
+// ── INVITE GUESTS ─────────────────────────────────────────────
+export const inviteGuests = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { bookingId } = req.params
+    const { guests } = req.body // [{ fullName, email }]
+    const customerId = req.customer?.customerId
+
+    if (!Array.isArray(guests) || guests.length === 0) {
+      res.status(400).json({ success: false, message: 'At least one guest is required.' })
+      return
+    }
+
+    const bookingResult = await query(
+      `SELECT b.*, c.first_name, c.last_name
+       FROM bookings b
+       JOIN customers c ON b.customer_id = c.id
+       WHERE b.id = $1 AND b.customer_id = $2`,
+      [bookingId, customerId]
+    )
+
+    if (bookingResult.rows.length === 0) {
+      res.status(404).json({ success: false, message: 'Booking not found.' })
+      return
+    }
+
+    const booking = bookingResult.rows[0]
+    const hostName = `${booking.first_name} ${booking.last_name}`
+
+    const inserted = []
+    for (const guest of guests) {
+      if (!guest.fullName || !guest.email) continue
+      const guestId = uuidv4()
+      const rsvpToken = crypto.randomBytes(24).toString('hex')
+
+      await query(
+        `INSERT INTO booking_guests (id, booking_id, full_name, email, rsvp_status, rsvp_token, invited_at)
+         VALUES ($1, $2, $3, $4, 'pending', $5, NOW())`,
+        [guestId, bookingId, guest.fullName.trim(), guest.email.trim().toLowerCase(), rsvpToken]
+      )
+
+      await sendGuestRsvpEmail(
+        guest.email.trim().toLowerCase(),
+        guest.fullName.trim(),
+        hostName,
+        booking.room,
+        booking.booking_date,
+        booking.time_slot,
+        rsvpToken
+      )
+
+      inserted.push({ id: guestId, fullName: guest.fullName, email: guest.email })
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `${inserted.length} guest invitation(s) sent.`,
+      data: { guests: inserted },
+    })
+  } catch (err) {
+    console.error('Invite guests error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
+
+// ── RSVP RESPONSE (public, no auth — guest clicks email link) ──
+export const getRsvpDetails = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { token } = req.params
+    const result = await query(
+      `SELECT bg.*, b.room, b.booking_date, b.time_slot, c.first_name, c.last_name
+       FROM booking_guests bg
+       JOIN bookings b ON bg.booking_id = b.id
+       JOIN customers c ON b.customer_id = c.id
+       WHERE bg.rsvp_token = $1`,
+      [token]
+    )
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ success: false, message: 'Invitation not found.' })
+      return
+    }
+
+    const r = result.rows[0]
+    res.status(200).json({
+      success: true,
+      data: {
+        guestName: r.full_name,
+        hostName: `${r.first_name} ${r.last_name}`,
+        room: r.room,
+        bookingDate: r.booking_date,
+        timeSlot: r.time_slot,
+        rsvpStatus: r.rsvp_status,
+      },
+    })
+  } catch (err) {
+    console.error('Get RSVP error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
+
+export const respondToRsvp = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { token } = req.params
+    const { status } = req.body // 'accepted' | 'declined'
+
+    if (!['accepted', 'declined'].includes(status)) {
+      res.status(400).json({ success: false, message: 'Invalid status.' })
+      return
+    }
+
+    const result = await query(
+      `UPDATE booking_guests
+       SET rsvp_status = $1, responded_at = NOW()
+       WHERE rsvp_token = $2
+       RETURNING *`,
+      [status, token]
+    )
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ success: false, message: 'Invitation not found.' })
+      return
+    }
+
+    res.status(200).json({ success: true, message: `RSVP recorded as ${status}.` })
+  } catch (err) {
+    console.error('Respond to RSVP error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
+
+// ── GET BOOKING GUESTS ────────────────────────────────────────
+export const getBookingGuests = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { bookingId } = req.params
+    const customerId = req.customer?.customerId
+
+    const ownerCheck = await query(
+      'SELECT id FROM bookings WHERE id = $1 AND customer_id = $2',
+      [bookingId, customerId]
+    )
+    if (ownerCheck.rows.length === 0) {
+      res.status(404).json({ success: false, message: 'Booking not found.' })
+      return
+    }
+
+    const result = await query(
+      `SELECT id, full_name, email, rsvp_status, invited_at, responded_at
+       FROM booking_guests WHERE booking_id = $1 ORDER BY invited_at ASC`,
+      [bookingId]
+    )
+
+    res.status(200).json({
+      success: true,
+      data: { guests: result.rows.map(g => ({
+        id: g.id,
+        fullName: g.full_name,
+        email: g.email,
+        rsvpStatus: g.rsvp_status,
+        invitedAt: g.invited_at,
+        respondedAt: g.responded_at,
+      })) },
+    })
+  } catch (err) {
+    console.error('Get booking guests error:', err)
     res.status(500).json({ success: false, message: 'Something went wrong.' })
   }
 }

@@ -8,6 +8,10 @@ import {
   rescheduleBooking,
   verifyIkoyiMembership,
   getBooking,
+  inviteGuests,
+  getRsvpDetails,
+  respondToRsvp,
+  getBookingGuests,
 } from '../controllers/booking.controller'
 import { requireAuth } from '../middleware/auth'
 
@@ -28,3 +32,11 @@ router.get('/:bookingId', requireAuth, getBooking)
 router.patch('/:bookingId/reschedule', requireAuth, rescheduleBooking)
 
 export default router
+
+// Guest invitations
+router.post('/:bookingId/guests', requireAuth, inviteGuests)
+router.get('/:bookingId/guests', requireAuth, getBookingGuests)
+
+// Public RSVP (guest clicks link from email — no login)
+router.get('/rsvp/:token', getRsvpDetails)
+router.post('/rsvp/:token/respond', respondToRsvp)

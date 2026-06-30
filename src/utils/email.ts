@@ -123,3 +123,44 @@ export const sendWelcomeEmail = async (
     `,
   })
 }
+export const sendGuestRsvpEmail = async (
+  guestEmail: string,
+  guestName: string,
+  hostName: string,
+  room: string,
+  date: string,
+  timeSlot: string,
+  rsvpToken: string
+) => {
+  const roomLabels: Record<string, string> = {
+    'private-cinema': 'Private Cinema',
+    'hi-fi-room': 'Hi-Fi Room',
+    'media-room': 'Media Room',
+  }
+  const rsvpUrl = `${process.env.FRONTEND_URL}/rsvp/${rsvpToken}`
+
+  await resend.emails.send({
+    from: `Soundhous Reserve <${FROM}>`,
+    to: guestEmail,
+    subject: `You're invited — ${hostName} at Soundhous Reserve`,
+    html: `
+      <div style="font-family: Georgia, serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #0E0C0A; color: #F5F0E8;">
+        <p style="font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #C5855A; margin-bottom: 16px;">Soundhous Reserve</p>
+        <h1 style="font-style: italic; font-weight: 400; font-size: 26px; margin-bottom: 16px;">You're invited, ${guestName}.</h1>
+        <p style="font-family: sans-serif; font-size: 14px; line-height: 1.7; color: rgba(245,240,232,0.7);">
+          ${hostName} has invited you to a session at the Soundhous Experience Centre.
+        </p>
+        <div style="border: 1px solid rgba(197,133,90,0.2); padding: 20px; border-radius: 2px; margin: 24px 0; font-family: sans-serif; font-size: 13px;">
+          <p style="margin: 0 0 8px;"><strong>${roomLabels[room] || room}</strong></p>
+          <p style="margin: 0; color: rgba(245,240,232,0.6);">${date} · ${timeSlot}</p>
+        </div>
+        <a href="${rsvpUrl}" style="display: inline-block; padding: 14px 28px; background: #C5855A; color: #0E0C0A; text-decoration: none; font-family: sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; border-radius: 2px;">
+          Respond to invite →
+        </a>
+        <p style="font-family: sans-serif; font-size: 11px; color: rgba(245,240,232,0.3); margin-top: 32px;">
+          17 Adeyemo Alakija Street, Victoria Island, Lagos
+        </p>
+      </div>
+    `,
+  })
+}
