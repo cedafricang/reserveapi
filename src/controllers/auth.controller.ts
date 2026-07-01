@@ -253,6 +253,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       })
       return
     }
+    // Block unverified accounts (except those auto-verified via Shopify)
+if (!customer.email_verified) {
+  res.status(403).json({
+    success: false,
+    message: 'Please verify your email before signing in. Check your inbox for the verification link.',
+    code: 'EMAIL_NOT_VERIFIED',
+  })
+  return
+}
 
     // Update last active
     await query(
