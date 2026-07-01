@@ -356,7 +356,7 @@ export const sendInternalBookingAlert = async (
         </p>
         <p style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(197,133,90,0.6);margin-bottom:28px;">Internal notification</p>
         ${bodyMap[eventType]}
-        <p style="font-size:11px;color:rgba(245,240,232,0.2);margin-top:32px;">
+        <p style="font-size:11px;color:F5F0E8; margin-top:32px;">
           This is an automated alert from Soundhous Reserve. Do not reply.
         </p>
       </div>

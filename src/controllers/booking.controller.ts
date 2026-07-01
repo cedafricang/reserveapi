@@ -316,10 +316,10 @@ export const verifyAndConfirmBooking = async (
         meta.date,
         meta.timeSlot,
         meta.guestCount || 1,
-        meta.roomPrice + meta.refreshmentPrice,
+       Number(meta.roomPrice) + Number(meta.refreshmentPrice),
         reference,
         meta.refreshment,
-        meta.refreshmentPrice,
+        Number(meta.refreshmentPrice),
       ]
     )
     const ticketNumber = generateTicketNumber(meta.room)
@@ -352,7 +352,7 @@ await sendInternalBookingAlert('new-booking', {
     // Award points for the session fee (not refreshments)
     const pointsEarned = await awardPoints(
       customerId!,
-      meta.roomPrice,
+      meta.roomPrice + meta.refreshmentPrice,  // in annual_spend update
       `Booking: ${meta.room} on ${meta.date}`,
       'earn-booking',
       bookingId
@@ -1164,7 +1164,7 @@ export const respondToRsvp = async (
       message: `RSVP recorded as ${status}.`,
       data: { ticketNumber: status === 'accepted' ? ticketNumber : null },
     })
-    
+
   } catch (err) {
     console.error('Respond to RSVP error:', err)
     res.status(500).json({ success: false, message: 'Something went wrong.' })
