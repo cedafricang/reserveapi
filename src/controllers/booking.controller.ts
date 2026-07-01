@@ -351,22 +351,22 @@ await sendInternalBookingAlert('new-booking', {
 
     // Award points for the session fee (not refreshments)
     const pointsEarned = await awardPoints(
-      customerId!,
-      meta.roomPrice + meta.refreshmentPrice,  // in annual_spend update
-      `Booking: ${meta.room} on ${meta.date}`,
-      'earn-booking',
-      bookingId
-    )
+  customerId!,
+  Number(meta.roomPrice),
+  `Booking: ${meta.room} on ${meta.date}`,
+  'earn-booking',
+  bookingId
+)
 
-    // Update annual spend and check tier upgrade
-    await query(
-      `UPDATE customers
-       SET annual_spend = annual_spend + $1,
-           last_active_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $2`,
-      [meta.roomPrice + meta.refreshmentPrice, customerId]
-    )
+// Update annual spend and check tier upgrade
+await query(
+  `UPDATE customers
+   SET annual_spend = annual_spend + $1,
+       last_active_at = NOW(),
+       updated_at = NOW()
+   WHERE id = $2`,
+  [Number(meta.roomPrice) + Number(meta.refreshmentPrice), customerId]
+)
 
     await checkAndUpgradeTier(customerId!)
 
