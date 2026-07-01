@@ -218,7 +218,7 @@ export const sendTicketEmail = async (
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <p style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.4);margin:0 0 6px;">Soundhous Experience Centre</p>
+                    <p style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:]#F5F0E8; margin:0 0 6px;">Soundhous Experience Centre</p>
                     <p style="font-family:Georgia,serif;font-style:italic;font-size:24px;color:#F5F0E8;margin:0;">${roomLabel}</p>
                   </td>
                   <td align="right" valign="top">
@@ -258,7 +258,7 @@ export const sendTicketEmail = async (
           </tr>
           <tr>
             <td style="padding:24px 28px;background:rgba(197,133,90,0.05);text-align:center;">
-              <p style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(245,240,232,0.4);margin:0 0 8px;">Ticket number</p>
+              <p style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#F5F0E8; margin:0 0 8px;">Ticket number</p>
               <p style="font-family:'DM Mono',monospace;font-size:22px;letter-spacing:0.12em;color:#F5F0E8;margin:0;font-weight:600;">${ticketNumber}</p>
             </td>
           </tr>
@@ -270,8 +270,8 @@ export const sendTicketEmail = async (
           </p>
         </div>
 
-        <p style="font-size:11px;color:rgba(245,240,232,0.2);text-align:center;margin-top:32px;">
-          17 Adeyemo Alakija Street &middot; Victoria Island &middot; Lagos &middot; reserve.soundhous.com
+        <p style="font-size:11px;color:#F5F0E8; text-align:center;margin-top:32px;">
+          17 Adeyemo Alakija Street &middot; Victoria Island &middot; Lagos &middot; bookings.soundhous.com
         </p>
       </div>
     `,
