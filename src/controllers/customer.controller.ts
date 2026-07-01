@@ -65,9 +65,11 @@ export const getProfile = async (
   res: Response
 ): Promise<void> => {
   try {
+    const customerId = req.customer?.customerId
+
     const result = await query(
       'SELECT * FROM customers WHERE id = $1',
-      [req.customer?.customerId]
+      [customerId]
     )
 
     if (result.rows.length === 0) {
@@ -75,17 +77,38 @@ export const getProfile = async (
       return
     }
 
+    const customer = result.rows[0]
+
+    // Always calculate annual_spend fresh from actual bookings
+    const spendResult = await query(
+      `SELECT COALESCE(SUM(amount_paid), 0) as real_spend
+       FROM bookings
+       WHERE customer_id = $1
+       AND payment_type = 'cash'
+       AND status != 'cancelled'`,
+      [customerId]
+    )
+    const realSpend = Number(spendResult.rows[0].real_spend)
+
+    // Auto-correct stored value if it has drifted
+    if (Number(customer.annual_spend) !== realSpend) {
+      await query(
+        'UPDATE customers SET annual_spend = $1, updated_at = NOW() WHERE id = $2',
+        [realSpend, customerId]
+      )
+      customer.annual_spend = realSpend
+    }
+
     res.status(200).json({
       success: true,
       message: 'Profile retrieved.',
-      data: { customer: sanitizeCustomer(result.rows[0]) },
+      data: { customer: sanitizeCustomer(customer) },
     })
   } catch (err) {
     console.error('Get profile error:', err)
     res.status(500).json({ success: false, message: 'Something went wrong.' })
   }
 }
-
 // ── UPDATE PROFILE ────────────────────────────────────────────
 export const updateProfile = async (
   req: AuthRequest,
