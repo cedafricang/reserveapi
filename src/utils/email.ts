@@ -218,7 +218,7 @@ export const sendTicketEmail = async (
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <p style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:]#F5F0E8; margin:0 0 6px;">Soundhous Experience Centre</p>
+                    <p style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#F5F0E8; margin:0 0 6px;">Soundhous Experience Centre</p>
                     <p style="font-family:Georgia,serif;font-style:italic;font-size:24px;color:#F5F0E8;margin:0;">${roomLabel}</p>
                   </td>
                   <td align="right" valign="top">
