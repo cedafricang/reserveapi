@@ -131,34 +131,147 @@ export const sendGuestRsvpEmail = async (
   date: string,
   timeSlot: string,
   rsvpToken: string
-) => {
-  const roomLabels: Record<string, string> = {
-    'private-cinema': 'Private Cinema',
-    'hi-fi-room': 'Hi-Fi Room',
-    'media-room': 'Media Room',
-  }
-  const rsvpUrl = `${process.env.FRONTEND_URL}/rsvp/${rsvpToken}`
+): Promise<void> => {
+  const roomLabel = roomDisplayNames[room] || room
+  const formattedDate = new Date(date).toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+  const rsvpUrl = `${FRONTEND_URL}/rsvp/${rsvpToken}`
 
   await resend.emails.send({
     from: `Soundhous Reserve <${FROM}>`,
     to: guestEmail,
-    subject: `You're invited — ${hostName} at Soundhous Reserve`,
+    subject: `${hostName} invited you to Soundhous Reserve`,
     html: `
-      <div style="font-family: Georgia, serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #0E0C0A; color: #F5F0E8;">
-        <p style="font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #C5855A; margin-bottom: 16px;">Soundhous Reserve</p>
-        <h1 style="font-style: italic; font-weight: 400; font-size: 26px; margin-bottom: 16px;">You're invited, ${guestName}.</h1>
-        <p style="font-family: sans-serif; font-size: 14px; line-height: 1.7; color: rgba(245,240,232,0.7);">
-          ${hostName} has invited you to a session at the Soundhous Experience Centre.
+      <div style="max-width:480px;margin:0 auto;font-family:'DM Sans',sans-serif;background:#0E0C0A;color:#F5F0E8;padding:48px 40px;border-radius:4px;">
+        <p style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:#F5F0E8;margin-bottom:8px;">
+          soundhous <span style="color:#C5855A;">reserve</span>
         </p>
-        <div style="border: 1px solid rgba(197,133,90,0.2); padding: 20px; border-radius: 2px; margin: 24px 0; font-family: sans-serif; font-size: 13px;">
-          <p style="margin: 0 0 8px;"><strong>${roomLabels[room] || room}</strong></p>
-          <p style="margin: 0; color: rgba(245,240,232,0.6);">${date} · ${timeSlot}</p>
+        <div style="height:1px;background:rgba(197,133,90,0.15);margin:24px 0;"></div>
+        <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#C5855A;margin-bottom:16px;font-weight:500;">
+          You're invited
+        </p>
+        <h1 style="font-family:Georgia,serif;font-style:italic;font-size:28px;font-weight:400;color:#F5F0E8;margin-bottom:16px;line-height:1.2;">
+          ${guestName}, join ${hostName} at Soundhous.
+        </h1>
+        <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.7;margin-bottom:24px;">
+          ${hostName} has booked the <strong style="color:#F5F0E8;">${roomLabel}</strong> and would like you there.
+        </p>
+        <div style="background:rgba(197,133,90,0.06);border:1px solid rgba(197,133,90,0.2);border-radius:2px;padding:16px 20px;margin-bottom:28px;">
+          <p style="font-size:13px;color:rgba(245,240,232,0.7);margin:0 0 4px;"><strong style="color:#F5F0E8;">${formattedDate}</strong></p>
+          <p style="font-size:13px;color:rgba(245,240,232,0.7);margin:0;">${timeSlot}</p>
         </div>
-        <a href="${rsvpUrl}" style="display: inline-block; padding: 14px 28px; background: #C5855A; color: #0E0C0A; text-decoration: none; font-family: sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; border-radius: 2px;">
-          Respond to invite →
+        <a href="${rsvpUrl}" style="display:inline-block;background:#C5855A;color:#0E0C0A;text-decoration:none;padding:14px 32px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;font-weight:600;border-radius:2px;">
+          RSVP →
         </a>
-        <p style="font-family: sans-serif; font-size: 11px; color: rgba(245,240,232,0.3); margin-top: 32px;">
-          17 Adeyemo Alakija Street, Victoria Island, Lagos
+        <p style="font-size:11px;color:rgba(245,240,232,0.25);margin-top:24px;line-height:1.6;">
+          You must RSVP to receive your entry ticket. Without a ticket, access to the Experience Centre cannot be guaranteed.
+        </p>
+        <div style="height:1px;background:rgba(197,133,90,0.1);margin:32px 0;"></div>
+        <p style="font-size:11px;color:rgba(245,240,232,0.18);">
+          17 Adeyemo Alakija Street · Victoria Island · Lagos · reserve.soundhous.com
+        </p>
+      </div>
+    `,
+  })
+}
+const roomDisplayNames: Record<string, string> = {
+  'private-cinema': 'Private Cinema',
+  'hi-fi-room': 'Hi-Fi Room',
+  'media-room': 'Media Room',
+}
+
+export const sendTicketEmail = async (
+  recipientEmail: string,
+  recipientName: string,
+  ticketNumber: string,
+  room: string,
+  date: string,
+  timeSlot: string,
+  hostName: string,
+  isHost: boolean
+): Promise<void> => {
+  const roomLabel = roomDisplayNames[room] || room
+  const formattedDate = new Date(date).toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+
+  await resend.emails.send({
+    from: `Soundhous Reserve <${FROM}>`,
+    to: recipientEmail,
+    subject: isHost
+      ? `Your ticket is ready — ${roomLabel}`
+      : `You're confirmed — your ticket for ${hostName}'s session`,
+    html: `
+      <div style="max-width:520px;margin:0 auto;font-family:'DM Sans',sans-serif;background:#0E0C0A;padding:48px 20px;">
+        <p style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:#F5F0E8;text-align:center;margin-bottom:8px;">
+          soundhous <span style="color:#C5855A;">reserve</span>
+        </p>
+        <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#C5855A;text-align:center;margin-bottom:32px;font-weight:500;">
+          ${isHost ? 'Your session is confirmed' : `You're going, ${recipientName}`}
+        </p>
+
+        <!-- Boarding pass card -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;background:#16130D;border-radius:8px;overflow:hidden;border:1px solid rgba(197,133,90,0.25);">
+          <tr>
+            <td style="padding:28px 28px 20px;border-bottom:1px dashed rgba(197,133,90,0.3);">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <p style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.4);margin:0 0 6px;">Soundhous Experience Centre</p>
+                    <p style="font-family:Georgia,serif;font-style:italic;font-size:24px;color:#F5F0E8;margin:0;">${roomLabel}</p>
+                  </td>
+                  <td align="right" valign="top">
+                    <span style="font-size:28px;">&#9992;&#65039;</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 28px;border-bottom:1px dashed rgba(197,133,90,0.3);">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="50%">
+                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.35);margin:0 0 4px;">Date</p>
+                    <p style="font-size:13px;color:#F5F0E8;margin:0;">${formattedDate}</p>
+                  </td>
+                  <td width="50%">
+                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.35);margin:0 0 4px;">Time</p>
+                    <p style="font-size:13px;color:#F5F0E8;margin:0;">${timeSlot}</p>
+                  </td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;">
+                <tr>
+                  <td width="50%">
+                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.35);margin:0 0 4px;">Guest</p>
+                    <p style="font-size:13px;color:#F5F0E8;margin:0;">${recipientName}</p>
+                  </td>
+                  <td width="50%">
+                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.35);margin:0 0 4px;">${isHost ? 'Host' : 'Hosted by'}</p>
+                    <p style="font-size:13px;color:#F5F0E8;margin:0;">${hostName}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 28px;background:rgba(197,133,90,0.05);text-align:center;">
+              <p style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(245,240,232,0.4);margin:0 0 8px;">Ticket number</p>
+              <p style="font-family:'DM Mono',monospace;font-size:22px;letter-spacing:0.12em;color:#C5855A;margin:0;font-weight:600;">${ticketNumber}</p>
+            </td>
+          </tr>
+        </table>
+
+        <div style="margin-top:28px;padding:18px 20px;border:1px solid rgba(197,133,90,0.15);border-radius:4px;background:rgba(255,255,255,0.015);">
+          <p style="font-size:12px;color:rgba(245,240,232,0.55);line-height:1.7;margin:0;">
+            <strong style="color:#F5F0E8;">Keep this ticket safe.</strong> You and every guest must present a valid ticket number at the door. Without it, entry to the Experience Centre cannot be guaranteed.
+          </p>
+        </div>
+
+        <p style="font-size:11px;color:rgba(245,240,232,0.2);text-align:center;margin-top:32px;">
+          17 Adeyemo Alakija Street &middot; Victoria Island &middot; Lagos &middot; reserve.soundhous.com
         </p>
       </div>
     `,

@@ -3,8 +3,9 @@ import { v4 as uuidv4 } from 'uuid'
 import { query } from '../db'
 import { AuthRequest } from '../middleware/auth'
 import { awardPoints, checkAndUpgradeTier } from './customer.controller'
-import { sendGuestRsvpEmail } from '../utils/email'
+
 import crypto from 'crypto'
+import { sendGuestRsvpEmail, sendTicketEmail } from '../utils/email'
 
 // ── Constants ─────────────────────────────────────────────────
 const ROOM_PRICES: Record<string, number> = {
@@ -320,6 +321,22 @@ export const verifyAndConfirmBooking = async (
         meta.refreshmentPrice,
       ]
     )
+    const ticketNumber = generateTicketNumber(meta.room)
+await query(`UPDATE bookings SET ticket_number = $1 WHERE id = $2`, [ticketNumber, bookingResult.rows[0].id])
+
+const hostResult = await query('SELECT first_name, last_name, email FROM customers WHERE id = $1', [customerId])
+const hostInfo = hostResult.rows[0]
+await sendTicketEmail(
+  hostInfo.email,
+  `${hostInfo.first_name} ${hostInfo.last_name}`,
+  ticketNumber,
+  meta.room,
+  meta.date,
+  meta.timeSlot,
+  `${hostInfo.first_name} ${hostInfo.last_name}`,
+  true
+)
+    
 
     // Award points for the session fee (not refreshments)
     const pointsEarned = await awardPoints(
@@ -343,28 +360,31 @@ export const verifyAndConfirmBooking = async (
     await checkAndUpgradeTier(customerId!)
 
     res.status(201).json({
-      success: true,
-      message: 'Booking confirmed.',
-      data: {
-        booking: {
-          id: bookingResult.rows[0].id,
-          room: bookingResult.rows[0].room,
-          bookingDate: bookingResult.rows[0].booking_date,
-          timeSlot: bookingResult.rows[0].time_slot,
-          guestCount: bookingResult.rows[0].guest_count,
-          paymentType: bookingResult.rows[0].payment_type,
-          amountPaid: Number(bookingResult.rows[0].amount_paid),
-          refreshment: bookingResult.rows[0].refreshment,
-          status: bookingResult.rows[0].status,
-        },
-        pointsEarned,
-      },
-    })
+  success: true,
+  message: 'Booking confirmed.',
+  data: {
+    booking: {
+      id: bookingResult.rows[0].id,
+      room: bookingResult.rows[0].room,
+      bookingDate: bookingResult.rows[0].booking_date,
+      timeSlot: bookingResult.rows[0].time_slot,
+      guestCount: bookingResult.rows[0].guest_count,
+      paymentType: bookingResult.rows[0].payment_type,
+      amountPaid: Number(bookingResult.rows[0].amount_paid),
+      refreshment: bookingResult.rows[0].refreshment,
+      status: bookingResult.rows[0].status,
+      ticketNumber,
+    },
+    pointsEarned,
+  },
+})
   } catch (err) {
     console.error('Verify booking error:', err)
     res.status(500).json({ success: false, message: 'Something went wrong.' })
   }
 }
+
+
 
 // ── COMPLIMENTARY TIER BOOKING ────────────────────────────────
 export const createComplimentaryBooking = async (
@@ -465,6 +485,21 @@ export const createComplimentaryBooking = async (
         refreshmentPrice,
       ]
     )
+    const ticketNumber = generateTicketNumber(room)
+await query(`UPDATE bookings SET ticket_number = $1 WHERE id = $2`, [ticketNumber, bookingResult.rows[0].id])
+
+const hostResult = await query('SELECT first_name, last_name, email FROM customers WHERE id = $1', [customerId])
+const hostInfo = hostResult.rows[0]
+await sendTicketEmail(
+  hostInfo.email,
+  `${hostInfo.first_name} ${hostInfo.last_name}`,
+  ticketNumber,
+  room,
+  date,
+  timeSlot,
+  `${hostInfo.first_name} ${hostInfo.last_name}`,
+  true
+)
 
     // Increment sessions used
     await query(
@@ -490,6 +525,7 @@ export const createComplimentaryBooking = async (
           amountPaid: 0,
           refreshment: bookingResult.rows[0].refreshment,
           status: bookingResult.rows[0].status,
+          ticketNumber,
         },
         sessionsRemaining: totalAllowed - used - 1,
       },
@@ -608,6 +644,21 @@ export const createPointsBooking = async (
           pointsRequired,
         ]
       )
+      const ticketNumber = generateTicketNumber(room)
+await query(`UPDATE bookings SET ticket_number = $1 WHERE id = $2`, [ticketNumber, bookingResult.rows[0].id])
+
+const hostResult = await query('SELECT first_name, last_name, email FROM customers WHERE id = $1', [customerId])
+const hostInfo = hostResult.rows[0]
+await sendTicketEmail(
+  hostInfo.email,
+  `${hostInfo.first_name} ${hostInfo.last_name}`,
+  ticketNumber,
+  room,
+  date,
+  timeSlot,
+  `${hostInfo.first_name} ${hostInfo.last_name}`,
+  true
+)
 
       // Record points transaction
       await query(
@@ -645,6 +696,7 @@ export const createPointsBooking = async (
             pointsUsed: pointsRequired,
             refreshment: bookingResult.rows[0].refreshment,
             status: bookingResult.rows[0].status,
+            ticketNumber,
           },
           pointsUsed: pointsRequired,
           remainingBalance: Number(updatedCustomer.rows[0].points_balance),
@@ -827,6 +879,18 @@ const convertTo24Hour = (time: string): string => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`
 }
 
+const TICKET_PREFIX: Record<string, string> = {
+  'private-cinema': 'SHCINEMA',
+  'hi-fi-room': 'SHHIFI',
+  'media-room': 'SHMEDIA',
+}
+
+const generateTicketNumber = (room: string): string => {
+  const prefix = TICKET_PREFIX[room] || 'SHRESERVE'
+  const random = Math.floor(10000 + Math.random() * 90000) // 5-digit
+  return `${prefix}-${random}`
+}
+
 // ── IKOYI CLUB MEMBERSHIP VERIFICATION ───────────────────────
 export const verifyIkoyiMembership = async (
   req: Request,
@@ -1004,26 +1068,57 @@ export const respondToRsvp = async (
       return
     }
 
-    const result = await query(
-      `UPDATE booking_guests
-       SET rsvp_status = $1, responded_at = NOW()
-       WHERE rsvp_token = $2
-       RETURNING *`,
-      [status, token]
+    const guestResult = await query(
+      `SELECT bg.*, b.room, b.booking_date, b.time_slot, c.first_name, c.last_name
+       FROM booking_guests bg
+       JOIN bookings b ON bg.booking_id = b.id
+       JOIN customers c ON b.customer_id = c.id
+       WHERE bg.rsvp_token = $1`,
+      [token]
     )
 
-    if (result.rows.length === 0) {
+    if (guestResult.rows.length === 0) {
       res.status(404).json({ success: false, message: 'Invitation not found.' })
       return
     }
 
-    res.status(200).json({ success: true, message: `RSVP recorded as ${status}.` })
+    const guest = guestResult.rows[0]
+    let ticketNumber: string | null = guest.ticket_number
+
+    if (status === 'accepted' && !ticketNumber) {
+      ticketNumber = generateTicketNumber(guest.room)
+    }
+
+    await query(
+      `UPDATE booking_guests
+       SET rsvp_status = $1, responded_at = NOW(), ticket_number = COALESCE($2, ticket_number)
+       WHERE rsvp_token = $3`,
+      [status, ticketNumber, token]
+    )
+
+    if (status === 'accepted' && ticketNumber) {
+      await sendTicketEmail(
+        guest.email,
+        guest.full_name,
+        ticketNumber,
+        guest.room,
+        guest.booking_date,
+        guest.time_slot,
+        `${guest.first_name} ${guest.last_name}`,
+        false
+      )
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `RSVP recorded as ${status}.`,
+      data: { ticketNumber: status === 'accepted' ? ticketNumber : null },
+    })
   } catch (err) {
     console.error('Respond to RSVP error:', err)
     res.status(500).json({ success: false, message: 'Something went wrong.' })
   }
 }
-
 // ── GET BOOKING GUESTS ────────────────────────────────────────
 export const getBookingGuests = async (
   req: AuthRequest,
