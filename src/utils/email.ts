@@ -233,11 +233,11 @@ export const sendTicketEmail = async (
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td width="50%">
-                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.35);margin:0 0 4px;">Date</p>
+                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:#F5F0E8; margin:0 0 4px;">Date</p>
                     <p style="font-size:13px;color:#F5F0E8;margin:0;">${formattedDate}</p>
                   </td>
                   <td width="50%">
-                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.35);margin:0 0 4px;">Time</p>
+                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:#F5F0E8; margin:0 0 4px;">Time</p>
                     <p style="font-size:13px;color:#F5F0E8;margin:0;">${timeSlot}</p>
                   </td>
                 </tr>
@@ -245,11 +245,11 @@ export const sendTicketEmail = async (
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;">
                 <tr>
                   <td width="50%">
-                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.35);margin:0 0 4px;">Guest</p>
+                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:#F5F0E8; margin:0 0 4px;">Guest</p>
                     <p style="font-size:13px;color:#F5F0E8;margin:0;">${recipientName}</p>
                   </td>
                   <td width="50%">
-                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.35);margin:0 0 4px;">${isHost ? 'Host' : 'Hosted by'}</p>
+                    <p style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color: #F5F0E8;margin:0 0 4px;">${isHost ? 'Host' : 'Hosted by'}</p>
                     <p style="font-size:13px;color:#F5F0E8;margin:0;">${hostName}</p>
                   </td>
                 </tr>
@@ -259,13 +259,13 @@ export const sendTicketEmail = async (
           <tr>
             <td style="padding:24px 28px;background:rgba(197,133,90,0.05);text-align:center;">
               <p style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(245,240,232,0.4);margin:0 0 8px;">Ticket number</p>
-              <p style="font-family:'DM Mono',monospace;font-size:22px;letter-spacing:0.12em;color:#C5855A;margin:0;font-weight:600;">${ticketNumber}</p>
+              <p style="font-family:'DM Mono',monospace;font-size:22px;letter-spacing:0.12em;color:#F5F0E8;margin:0;font-weight:600;">${ticketNumber}</p>
             </td>
           </tr>
         </table>
 
         <div style="margin-top:28px;padding:18px 20px;border:1px solid rgba(197,133,90,0.15);border-radius:4px;background:rgba(255,255,255,0.015);">
-          <p style="font-size:12px;color:rgba(245,240,232,0.55);line-height:1.7;margin:0;">
+          <p style="font-size:12px;color:#F5F0E8;line-height:1.7;margin:0;">
             <strong style="color:#F5F0E8;">Keep this ticket safe.</strong> You and every guest must present a valid ticket number at the door. Without it, entry to the Experience Centre cannot be guaranteed.
           </p>
         </div>
