@@ -237,12 +237,13 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     // Check if signed up with Google (no password)
     if (!customer.password_hash) {
-      res.status(401).json({
-        success: false,
-        message: 'This account uses Google sign-in. Please continue with Google.',
-      })
-      return
-    }
+  res.status(401).json({
+    success: false,
+    message: 'An account exists for this email but no password has been set. Please sign up to create your password — your points and purchase history are already in your account.',
+    code: 'NO_PASSWORD',
+  })
+  return
+}
 
     // Verify password
     const passwordMatch = await bcrypt.compare(password, customer.password_hash)
