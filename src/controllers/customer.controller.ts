@@ -98,6 +98,22 @@ export const getProfile = async (
       )
       customer.annual_spend = realSpend
     }
+    // Recalculate points balance from actual transactions
+const pointsResult = await query(
+  `SELECT COALESCE(SUM(points), 0) as real_points
+   FROM points_transactions
+   WHERE customer_id = $1`,
+  [customerId]
+)
+const realPoints = Number(pointsResult.rows[0].real_points)
+
+if (Number(customer.points_balance) !== realPoints) {
+  await query(
+    'UPDATE customers SET points_balance = $1, updated_at = NOW() WHERE id = $2',
+    [realPoints, customerId]
+  )
+  customer.points_balance = realPoints
+}
 
     res.status(200).json({
       success: true,
