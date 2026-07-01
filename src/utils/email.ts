@@ -354,7 +354,7 @@ export const sendInternalBookingAlert = async (
         <p style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#F5F0E8;margin-bottom:8px;">
           soundhous <span style="color:#C5855A;">reserve</span>
         </p>
-        <p style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(197,133,90,0.6);margin-bottom:28px;">Internal notification</p>
+        <p style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#F5F0E8; margin-bottom:28px;">Internal notification</p>
         ${bodyMap[eventType]}
         <p style="font-size:11px;color:F5F0E8; margin-top:32px;">
           This is an automated alert from Soundhous Reserve. Do not reply.
@@ -367,7 +367,7 @@ export const sendInternalBookingAlert = async (
 function row(label: string, value: string): string {
   return `
     <tr>
-      <td style="padding:10px 0;border-bottom:1px solid rgba(197,133,90,0.1);color:rgba(245,240,232,0.4);width:40%;">${label}</td>
+      <td style="padding:10px 0;border-bottom:1px solid rgba(197,133,90,0.1);color:#F5F0E8;width:40%;">${label}</td>
       <td style="padding:10px 0;border-bottom:1px solid rgba(197,133,90,0.1);color:#F5F0E8;">${value}</td>
     </tr>
   `
