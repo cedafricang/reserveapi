@@ -5,7 +5,8 @@ import { AuthRequest } from '../middleware/auth'
 import { awardPoints, checkAndUpgradeTier } from './customer.controller'
 
 import crypto from 'crypto'
-import { sendGuestRsvpEmail, sendTicketEmail } from '../utils/email'
+
+import { sendGuestRsvpEmail, sendTicketEmail, sendInternalBookingAlert } from '../utils/email'
 
 // ── Constants ─────────────────────────────────────────────────
 const ROOM_PRICES: Record<string, number> = {
@@ -336,6 +337,16 @@ await sendTicketEmail(
   `${hostInfo.first_name} ${hostInfo.last_name}`,
   true
 )
+
+await sendInternalBookingAlert('new-booking', {
+  customerName: `${hostInfo.first_name} ${hostInfo.last_name}`,
+  customerEmail: hostInfo.email,
+  room: meta.room,
+  date: meta.date,
+  timeSlot: meta.timeSlot,
+  paymentType: 'cash',
+  ticketNumber,
+})
     
 
     // Award points for the session fee (not refreshments)
@@ -500,6 +511,15 @@ await sendTicketEmail(
   `${hostInfo.first_name} ${hostInfo.last_name}`,
   true
 )
+await sendInternalBookingAlert('new-booking', {
+  customerName: `${hostInfo.first_name} ${hostInfo.last_name}`,
+  customerEmail: hostInfo.email,
+  room,
+  date,
+  timeSlot,
+  paymentType: 'complimentary-tier',
+  ticketNumber,
+})
 
     // Increment sessions used
     await query(
@@ -659,6 +679,15 @@ await sendTicketEmail(
   `${hostInfo.first_name} ${hostInfo.last_name}`,
   true
 )
+await sendInternalBookingAlert('new-booking', {
+  customerName: `${hostInfo.first_name} ${hostInfo.last_name}`,
+  customerEmail: hostInfo.email,
+  room,
+  date,
+  timeSlot,
+  paymentType: 'points',
+  ticketNumber,
+})
 
       // Record points transaction
       await query(
@@ -1107,6 +1136,27 @@ export const respondToRsvp = async (
         `${guest.first_name} ${guest.last_name}`,
         false
       )
+      await sendInternalBookingAlert('rsvp-accepted', {
+        customerName: `${guest.first_name} ${guest.last_name}`,
+        customerEmail: '',
+        room: guest.room,
+        date: guest.booking_date,
+        timeSlot: guest.time_slot,
+        guestName: guest.full_name,
+        guestEmail: guest.email,
+      })
+    }
+
+    if (status === 'declined') {
+      await sendInternalBookingAlert('rsvp-declined', {
+        customerName: `${guest.first_name} ${guest.last_name}`,
+        customerEmail: '',
+        room: guest.room,
+        date: guest.booking_date,
+        timeSlot: guest.time_slot,
+        guestName: guest.full_name,
+        guestEmail: guest.email,
+      })
     }
 
     res.status(200).json({
@@ -1114,6 +1164,7 @@ export const respondToRsvp = async (
       message: `RSVP recorded as ${status}.`,
       data: { ticketNumber: status === 'accepted' ? ticketNumber : null },
     })
+    
   } catch (err) {
     console.error('Respond to RSVP error:', err)
     res.status(500).json({ success: false, message: 'Something went wrong.' })

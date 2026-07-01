@@ -27,18 +27,18 @@ export const sendVerificationEmail = async (
         <h1 style="font-family:Georgia,serif;font-style:italic;font-size:28px;font-weight:400;color:#F5F0E8;margin-bottom:16px;line-height:1.2;">
           Welcome, ${firstName}.
         </h1>
-        <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.7;margin-bottom:32px;">
+        <p style="font-size:14px;color:#F5F0E8;line-height:1.7;margin-bottom:32px;">
           One step left. Verify your email address to activate your Reserve account and start earning points.
         </p>
         <a href="${verifyUrl}" style="display:inline-block;background:#C5855A;color:#0E0C0A;text-decoration:none;padding:14px 32px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;font-weight:600;border-radius:2px;">
           Verify email address →
         </a>
-        <p style="font-size:11px;color:rgba(245,240,232,0.2);margin-top:32px;line-height:1.6;">
+        <p style="font-size:11px;color:#F5F0E8;margin-top:32px;line-height:1.6;">
           This link expires in 24 hours. If you did not create an account, ignore this email.
         </p>
         <div style="height:1px;background:rgba(197,133,90,0.1);margin:32px 0;"></div>
-        <p style="font-size:11px;color:rgba(245,240,232,0.18);">
-          17 Adeyemo Alakija Street · Victoria Island · Lagos · reserve.soundhous.com
+        <p style="font-size:11px;color:#F5F0E8;">
+          17 Adeyemo Alakija Street · Victoria Island · Lagos · bookings.soundhous.com
         </p>
       </div>
     `,
@@ -68,18 +68,18 @@ export const sendPasswordResetEmail = async (
         <h1 style="font-family:Georgia,serif;font-style:italic;font-size:28px;font-weight:400;color:#F5F0E8;margin-bottom:16px;line-height:1.2;">
           Reset your password.
         </h1>
-        <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.7;margin-bottom:32px;">
+        <p style="font-size:14px;color:#F5F0E8;line-height:1.7;margin-bottom:32px;">
           We received a request to reset your password. Click below to set a new one.
         </p>
         <a href="${resetUrl}" style="display:inline-block;background:#C5855A;color:#0E0C0A;text-decoration:none;padding:14px 32px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;font-weight:600;border-radius:2px;">
           Reset password →
         </a>
-        <p style="font-size:11px;color:rgba(245,240,232,0.2);margin-top:32px;line-height:1.6;">
+        <p style="font-size:11px;color:#F5F0E8;margin-top:32px;line-height:1.6;">
           This link expires in 1 hour. If you did not request a reset, ignore this email.
         </p>
         <div style="height:1px;background:rgba(197,133,90,0.1);margin:32px 0;"></div>
-        <p style="font-size:11px;color:rgba(245,240,232,0.18);">
-          17 Adeyemo Alakija Street · Victoria Island · Lagos · reserve.soundhous.com
+        <p style="font-size:11px;color:#F5F0E8;">
+          17 Adeyemo Alakija Street · Victoria Island · Lagos · bookings.soundhous.com
         </p>
       </div>
     `,
@@ -104,7 +104,7 @@ export const sendWelcomeEmail = async (
         <h1 style="font-family:Georgia,serif;font-style:italic;font-size:28px;font-weight:400;color:#F5F0E8;margin-bottom:16px;line-height:1.2;">
           The door is open, ${firstName}.
         </h1>
-        <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.7;margin-bottom:24px;">
+        <p style="font-size:14px;color:#F5F0E8;line-height:1.7;margin-bottom:24px;">
           Your Reserve account is active. Every purchase on Soundhous and every room booking earns you points toward complimentary sessions.
         </p>
         <div style="background:rgba(197,133,90,0.08);border:1px solid rgba(197,133,90,0.2);border-radius:2px;padding:16px 20px;margin-bottom:32px;">
@@ -116,8 +116,8 @@ export const sendWelcomeEmail = async (
           Book your first room →
         </a>
         <div style="height:1px;background:rgba(197,133,90,0.1);margin:32px 0;"></div>
-        <p style="font-size:11px;color:rgba(245,240,232,0.18);">
-          17 Adeyemo Alakija Street · Victoria Island · Lagos · reserve.soundhous.com
+        <p style="font-size:11px;color:#F5F0E8;">
+          17 Adeyemo Alakija Street · Victoria Island · Lagos · bookings.soundhous.com
         </p>
       </div>
     `,
@@ -154,7 +154,7 @@ export const sendGuestRsvpEmail = async (
         <h1 style="font-family:Georgia,serif;font-style:italic;font-size:28px;font-weight:400;color:#F5F0E8;margin-bottom:16px;line-height:1.2;">
           ${guestName}, join ${hostName} at Soundhous.
         </h1>
-        <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.7;margin-bottom:24px;">
+        <p style="font-size:14px;color:#F5F0E8;line-height:1.7;margin-bottom:24px;">
           ${hostName} has booked the <strong style="color:#F5F0E8;">${roomLabel}</strong> and would like you there.
         </p>
         <div style="background:rgba(197,133,90,0.06);border:1px solid rgba(197,133,90,0.2);border-radius:2px;padding:16px 20px;margin-bottom:28px;">
@@ -168,8 +168,8 @@ export const sendGuestRsvpEmail = async (
           You must RSVP to receive your entry ticket. Without a ticket, access to the Experience Centre cannot be guaranteed.
         </p>
         <div style="height:1px;background:rgba(197,133,90,0.1);margin:32px 0;"></div>
-        <p style="font-size:11px;color:rgba(245,240,232,0.18);">
-          17 Adeyemo Alakija Street · Victoria Island · Lagos · reserve.soundhous.com
+        <p style="font-size:11px;color:#F5F0E8;">
+          17 Adeyemo Alakija Street · Victoria Island · Lagos · bookings.soundhous.com
         </p>
       </div>
     `,
@@ -276,4 +276,99 @@ export const sendTicketEmail = async (
       </div>
     `,
   })
+}
+
+
+
+
+
+const INTERNAL_TEAM = [
+  'marketing@ced.africa',
+  'sadediran@ced.africa',
+  'golayinka@soundhous.com',
+  'experience@soundhous.com',
+]
+
+export const sendInternalBookingAlert = async (
+  eventType: 'new-booking' | 'rsvp-accepted' | 'rsvp-declined',
+  details: {
+    customerName: string
+    customerEmail: string
+    room: string
+    date: string
+    timeSlot: string
+    paymentType?: string
+    ticketNumber?: string
+    guestName?: string
+    guestEmail?: string
+  }
+): Promise<void> => {
+  const roomLabel = roomDisplayNames[details.room] || details.room
+
+  const subjects: Record<string, string> = {
+    'new-booking': `New booking — ${roomLabel} on ${details.date}`,
+    'rsvp-accepted': `Guest confirmed — ${details.guestName} for ${roomLabel}`,
+    'rsvp-declined': `Guest declined — ${details.guestName} for ${roomLabel}`,
+  }
+
+  const bodyMap: Record<string, string> = {
+    'new-booking': `
+      <h2 style="font-family:Georgia,serif;font-style:italic;font-weight:400;color:#F5F0E8;margin-bottom:20px;">New booking received.</h2>
+      <table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:13px;">
+        ${row('Room', roomLabel)}
+        ${row('Date', details.date)}
+        ${row('Time', details.timeSlot)}
+        ${row('Booker', `${details.customerName} &lt;${details.customerEmail}&gt;`)}
+        ${row('Payment type', details.paymentType || '—')}
+        ${row('Ticket number', details.ticketNumber || '—')}
+      </table>
+    `,
+    'rsvp-accepted': `
+      <h2 style="font-family:Georgia,serif;font-style:italic;font-weight:400;color:#F5F0E8;margin-bottom:20px;">A guest has confirmed their attendance.</h2>
+      <table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:13px;">
+        ${row('Guest', `${details.guestName} &lt;${details.guestEmail}&gt;`)}
+        ${row('Room', roomLabel)}
+        ${row('Date', details.date)}
+        ${row('Time', details.timeSlot)}
+        ${row('Hosted by', details.customerName)}
+      </table>
+    `,
+    'rsvp-declined': `
+      <h2 style="font-family:Georgia,serif;font-style:italic;font-weight:400;color:#F5F0E8;margin-bottom:20px;">A guest has declined their invitation.</h2>
+      <table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:13px;">
+        ${row('Guest', `${details.guestName} &lt;${details.guestEmail}&gt;`)}
+        ${row('Room', roomLabel)}
+        ${row('Date', details.date)}
+        ${row('Time', details.timeSlot)}
+        ${row('Hosted by', details.customerName)}
+      </table>
+    `,
+  }
+
+  await resend.emails.send({
+    from: `Soundhous Reserve <${FROM}>`,
+    to: INTERNAL_TEAM,
+    subject: subjects[eventType],
+    html: `
+      <div style="max-width:520px;margin:0 auto;font-family:'DM Sans',sans-serif;background:#0E0C0A;padding:40px;border-radius:4px;">
+        <p style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#F5F0E8;margin-bottom:8px;">
+          soundhous <span style="color:#C5855A;">reserve</span>
+        </p>
+        <p style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(197,133,90,0.6);margin-bottom:28px;">Internal notification</p>
+        ${bodyMap[eventType]}
+        <p style="font-size:11px;color:rgba(245,240,232,0.2);margin-top:32px;">
+          This is an automated alert from Soundhous Reserve. Do not reply.
+        </p>
+      </div>
+    `,
+  })
+}
+
+function row(label: string, value: string): string {
+  return `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid rgba(197,133,90,0.1);color:rgba(245,240,232,0.4);width:40%;">${label}</td>
+      <td style="padding:10px 0;border-bottom:1px solid rgba(197,133,90,0.1);color:#F5F0E8;">${value}</td>
+    </tr>
+  `
 }
