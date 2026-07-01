@@ -4,6 +4,7 @@ import { query } from '../db'
 import { AuthRequest } from '../middleware/auth'
 import { checkAndUpgradeTier } from './customer.controller'
 
+
 // ── OVERVIEW / STATS ──────────────────────────────────────────
 export const getOverview = async (
   _req: Request,
@@ -895,6 +896,203 @@ export const runAnnualReset = async (
     })
   } catch (err) {
     console.error('Annual reset error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
+// ── CREATE OFFLINE CUSTOMER ───────────────────────────────────
+export const createOfflineCustomer = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { firstName, lastName, email, phone, pointsToCredit, notes } = req.body
+
+    if (!firstName || !lastName || !email) {
+      res.status(400).json({ success: false, message: 'First name, last name, and email are required.' })
+      return
+    }
+
+    const emailLower = email.toLowerCase().trim()
+
+    // Check if customer already exists
+    const existing = await query('SELECT id, points_balance FROM customers WHERE email = $1', [emailLower])
+
+    if (existing.rows.length > 0) {
+      // Customer exists — just credit the points if any
+      const customerId = existing.rows[0].id
+      const points = Number(pointsToCredit) || 0
+
+      if (points > 0) {
+        await query(
+          `UPDATE customers SET points_balance = points_balance + $1, updated_at = NOW() WHERE id = $2`,
+          [points, customerId]
+        )
+        await query(
+          `INSERT INTO points_transactions (id, customer_id, type, points, description, created_at)
+           VALUES ($1, $2, 'admin-adjust', $3, $4, NOW())`,
+          [uuidv4(), customerId, points, notes || 'Offline purchase credit']
+        )
+      }
+
+      const updated = await query('SELECT * FROM customers WHERE id = $1', [customerId])
+      res.status(200).json({
+        success: true,
+        message: `Existing account found. ${points > 0 ? `${points} points credited.` : 'No points added.'}`,
+        data: { customer: updated.rows[0], pointsCredited: points, wasExisting: true },
+      })
+      return
+    }
+
+    // New offline customer — create with no password (same as Shopify pattern)
+    const customerId = uuidv4()
+    const referralCode = `${firstName.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5)}${Math.floor(1000 + Math.random() * 9000)}`
+    const points = Number(pointsToCredit) || 0
+
+    await query(
+      `INSERT INTO customers (
+        id, email, first_name, last_name, phone,
+        password_hash, tier, points_balance, annual_spend,
+        complimentary_sessions_used_this_year,
+        referral_code, email_verified,
+        last_active_at, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        NULL, 'reserve-member', $6, 0,
+        0,
+        $7, false,
+        NOW(), NOW(), NOW()
+      )`,
+      [customerId, emailLower, firstName.trim(), lastName.trim(), phone?.trim() || null, points, referralCode]
+    )
+
+    if (points > 0) {
+      await query(
+        `INSERT INTO points_transactions (id, customer_id, type, points, description, created_at)
+         VALUES ($1, $2, 'admin-adjust', $3, $4, NOW())`,
+        [uuidv4(), customerId, points, notes || 'Offline purchase credit']
+      )
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `Offline customer created.${points > 0 ? ` ${points} points pre-loaded.` : ''} They can sign up at bookings.soundhous.com with this email to activate their account.`,
+      data: { customerId, email: emailLower, pointsCredited: points, wasExisting: false },
+    })
+  } catch (err) {
+    console.error('Create offline customer error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
+
+// ── GET ALL BOOKING GUESTS (admin) ────────────────────────────
+export const getAdminGuests = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const limit = Math.min(100, parseInt(req.query.limit as string) || 50)
+    const offset = parseInt(req.query.offset as string) || 0
+
+    const result = await query(
+      `SELECT
+         bg.id,
+         bg.full_name,
+         bg.email,
+         bg.rsvp_status,
+         bg.ticket_number,
+         bg.invited_at,
+         bg.responded_at,
+         b.room,
+         b.booking_date,
+         b.time_slot,
+         c.first_name || ' ' || c.last_name as host_name,
+         c.email as host_email
+       FROM booking_guests bg
+       JOIN bookings b ON bg.booking_id = b.id
+       JOIN customers c ON b.customer_id = c.id
+       ORDER BY bg.invited_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    )
+
+    const countResult = await query('SELECT COUNT(*) FROM booking_guests')
+
+    res.status(200).json({
+      success: true,
+      data: {
+        guests: result.rows.map(g => ({
+          id: g.id,
+          fullName: g.full_name,
+          email: g.email,
+          rsvpStatus: g.rsvp_status,
+          ticketNumber: g.ticket_number,
+          invitedAt: g.invited_at,
+          respondedAt: g.responded_at,
+          room: g.room,
+          bookingDate: g.booking_date,
+          timeSlot: g.time_slot,
+          hostName: g.host_name,
+          hostEmail: g.host_email,
+        })),
+        total: parseInt(countResult.rows[0].count),
+      },
+    })
+  } catch (err) {
+    console.error('Get admin guests error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
+
+// ── EXPORT CSV (customers or guests) ─────────────────────────
+export const exportCSV = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { type } = req.query // 'customers' | 'guests'
+
+    if (type === 'customers') {
+      const result = await query(
+        `SELECT email, first_name, last_name, phone, tier, points_balance, annual_spend, email_verified, created_at
+         FROM customers ORDER BY created_at DESC`
+      )
+      const headers = ['Email', 'First Name', 'Last Name', 'Phone', 'Tier', 'Points Balance', 'Annual Spend (₦)', 'Email Verified', 'Joined']
+      const rows = result.rows.map(r => [
+        r.email, r.first_name, r.last_name, r.phone || '',
+        r.tier, r.points_balance, r.annual_spend,
+        r.email_verified ? 'Yes' : 'No',
+        new Date(r.created_at).toLocaleDateString('en-GB'),
+      ])
+      const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+      res.setHeader('Content-Type', 'text/csv')
+      res.setHeader('Content-Disposition', `attachment; filename="soundhous-reserve-customers-${Date.now()}.csv"`)
+      res.send(csv)
+    } else if (type === 'guests') {
+      const result = await query(
+        `SELECT bg.full_name, bg.email, bg.rsvp_status, bg.ticket_number, bg.invited_at,
+                b.room, b.booking_date, b.time_slot,
+                c.first_name || ' ' || c.last_name as host_name
+         FROM booking_guests bg
+         JOIN bookings b ON bg.booking_id = b.id
+         JOIN customers c ON b.customer_id = c.id
+         ORDER BY bg.invited_at DESC`
+      )
+      const headers = ['Guest Name', 'Guest Email', 'RSVP Status', 'Ticket Number', 'Invited At', 'Room', 'Booking Date', 'Time Slot', 'Host']
+      const rows = result.rows.map(r => [
+        r.full_name, r.email, r.rsvp_status, r.ticket_number || '',
+        new Date(r.invited_at).toLocaleDateString('en-GB'),
+        r.room, new Date(r.booking_date).toLocaleDateString('en-GB'),
+        r.time_slot, r.host_name,
+      ])
+      const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+      res.setHeader('Content-Type', 'text/csv')
+      res.setHeader('Content-Disposition', `attachment; filename="soundhous-reserve-guests-${Date.now()}.csv"`)
+      res.send(csv)
+    } else {
+      res.status(400).json({ success: false, message: 'Invalid export type. Use customers or guests.' })
+    }
+  } catch (err) {
+    console.error('Export CSV error:', err)
     res.status(500).json({ success: false, message: 'Something went wrong.' })
   }
 }

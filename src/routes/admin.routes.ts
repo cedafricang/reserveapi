@@ -12,15 +12,22 @@ import {
   addClubMember,
   getReports,
   runAnnualReset,
+  createOfflineCustomer,
+  getAdminGuests,
+  exportCSV,
 } from '../controllers/admin.controller'
 import { requireAuth } from '../middleware/auth'
 import { requireAdmin } from '../middleware/adminAuth'
+
 
 const router = Router()
 
 // All admin routes require auth + admin role
 router.use(requireAuth)
 router.use(requireAdmin)
+router.post('/customers/create-offline', requireAdmin, createOfflineCustomer)
+router.get('/guests', requireAdmin, getAdminGuests)
+router.get('/export', requireAdmin, exportCSV)
 
 // Overview
 router.get('/overview', getOverview)
