@@ -290,52 +290,47 @@ export const getReferralInfo = async (
   try {
     const customerId = req.customer?.customerId
 
-    const [customerResult, referralsResult] = await Promise.all([
-      query(
-        'SELECT referral_code FROM customers WHERE id = $1',
-        [customerId]
-      ),
-      query(
-        `SELECT
-           c.first_name,
-           c.last_name,
-           c.created_at,
-           c.email_verified,
-           EXISTS (
-             SELECT 1 FROM points_transactions pt
-             WHERE pt.customer_id = $1
-             AND pt.type IN ('earn-referral-reserve', 'earn-referral-product')
-             AND pt.description ILIKE '%' || c.first_name || '%'
-           ) as points_awarded
-         FROM customers c
-         WHERE c.referred_by = $1
-         ORDER BY c.created_at DESC`,
-        [customerId]
-      ),
-    ])
+    const customerResult = await query(
+      'SELECT id, referral_code FROM customers WHERE id = $1',
+      [customerId]
+    )
 
     if (customerResult.rows.length === 0) {
       res.status(404).json({ success: false, message: 'Customer not found.' })
       return
     }
 
-    const referralCode = customerResult.rows[0].referral_code
-    const frontendUrl = process.env.FRONTEND_URL || 'https://bookings.soundhous.com'
+    const customer = customerResult.rows[0]
+    const referralLink = `${process.env.FRONTEND_URL}?ref=${customer.referral_code}`
+
+    // Count only referred customers who have made at least one confirmed booking
+    const referralStats = await query(
+      `SELECT 
+        COUNT(DISTINCT c.id) as total_referrals,
+        COALESCE(SUM(pt.points), 0) as points_earned
+       FROM customers c
+       LEFT JOIN points_transactions pt 
+         ON pt.customer_id = $1 
+         AND pt.type = 'earn-referral-reserve'
+       WHERE c.referred_by = $1
+       AND EXISTS (
+         SELECT 1 FROM bookings b 
+         WHERE b.customer_id = c.id 
+         AND b.status = 'confirmed'
+       )`,
+      [customerId]
+    )
+
+    const stats = referralStats.rows[0]
 
     res.status(200).json({
       success: true,
       message: 'Referral info retrieved.',
       data: {
-        referralCode,
-        referralLink: `${frontendUrl}?ref=${referralCode}`,
-        totalReferrals: referralsResult.rows.length,
-        pointsEarned: referralsResult.rows.filter(r => r.points_awarded).length * 50,
-        referrals: referralsResult.rows.map(r => ({
-          name: `${r.first_name} ${r.last_name.charAt(0)}.`,
-          joinedAt: r.created_at,
-          verified: r.email_verified,
-          pointsAwarded: r.points_awarded,
-        })),
+        referralCode: customer.referral_code,
+        referralLink,
+        totalReferrals: parseInt(stats.total_referrals) || 0,
+        pointsEarned: parseInt(stats.points_earned) || 0,
       },
     })
   } catch (err) {
@@ -343,7 +338,6 @@ export const getReferralInfo = async (
     res.status(500).json({ success: false, message: 'Something went wrong.' })
   }
 }
-
 // ── CHECK TIER UPGRADE ────────────────────────────────────────
 // Called internally after any spend event
 export const checkAndUpgradeTier = async (
