@@ -344,27 +344,7 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
       customer.referral_code
     )
 
-    // Award referral points to the person who referred them
-    if (customer.referred_by) {
-      await query(
-        `UPDATE customers
-         SET points_balance = points_balance + 50,
-             updated_at = NOW()
-         WHERE id = $1`,
-        [customer.referred_by]
-      )
-
-      await query(
-        `INSERT INTO points_transactions (
-          id, customer_id, type, points, description, created_at
-        ) VALUES ($1, $2, 'earn-referral-reserve', 50, $3, NOW())`,
-        [
-          uuidv4(),
-          customer.referred_by,
-          `Referral: ${customer.first_name} ${customer.last_name} joined Reserve`,
-        ]
-      )
-    }
+    
 
     const tokens = generateTokens({
       customerId: customer.id,
