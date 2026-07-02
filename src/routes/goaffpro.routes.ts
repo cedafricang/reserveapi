@@ -1,12 +1,12 @@
 import { Router } from 'express'
-import {
-  handleReferralConverted,
-  handleCommissionApproved,
-} from '../controllers/goaffpro.controller'
+import { handleAffiliateOrderCreated } from '../controllers/goaffpro.controller'
 
 const router = Router()
 
-router.post('/referral-converted', handleReferralConverted)
-router.post('/commission-approved', handleCommissionApproved)
+router.post('/order-created', handleAffiliateOrderCreated)
+
+// Keep old route as fallback in case GoAffPro retries
+router.post('/commission-approved', handleAffiliateOrderCreated)
+router.post('/referral-converted', handleAffiliateOrderCreated)
 
 export default router
