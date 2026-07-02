@@ -372,27 +372,7 @@ await query(
     
 
     // Award referral points to referrer on first booking
-    const referrerCheck = await query(
-      `SELECT c.referred_by, 
-        (SELECT COUNT(*) FROM bookings WHERE customer_id = $1 AND status = 'confirmed') as booking_count
-       FROM customers c WHERE c.id = $1`,
-      [customerId]
-    )
-    if (referrerCheck.rows.length > 0) {
-      const { referred_by, booking_count } = referrerCheck.rows[0]
-      if (referred_by && Number(booking_count) === 1) {
-        await query(
-          `UPDATE customers SET points_balance = points_balance + 50, updated_at = NOW() WHERE id = $1`,
-          [referred_by]
-        )
-        await query(
-          `INSERT INTO points_transactions (id, customer_id, type, points, description, created_at)
-           VALUES ($1, $2, 'earn-referral-reserve', 50, $3, NOW())`,
-          [uuidv4(), referred_by, `Referral: ${customerId} made their first booking`]
-        )
-      }
-    }
-
+    
 
     res.status(201).json({
   success: true,
@@ -565,26 +545,7 @@ await sendInternalBookingAlert('new-booking', {
     )
 
     // Award referral points to referrer on first booking
-    const referrerCheck = await query(
-      `SELECT c.referred_by, 
-        (SELECT COUNT(*) FROM bookings WHERE customer_id = $1 AND status = 'confirmed') as booking_count
-       FROM customers c WHERE c.id = $1`,
-      [customerId]
-    )
-    if (referrerCheck.rows.length > 0) {
-      const { referred_by, booking_count } = referrerCheck.rows[0]
-      if (referred_by && Number(booking_count) === 1) {
-        await query(
-          `UPDATE customers SET points_balance = points_balance + 50, updated_at = NOW() WHERE id = $1`,
-          [referred_by]
-        )
-        await query(
-          `INSERT INTO points_transactions (id, customer_id, type, points, description, created_at)
-           VALUES ($1, $2, 'earn-referral-reserve', 50, $3, NOW())`,
-          [uuidv4(), referred_by, `Referral: ${customerId} made their first booking`]
-        )
-      }
-    }
+    
 
     res.status(201).json({
       success: true,
@@ -760,27 +721,7 @@ await sendInternalBookingAlert('new-booking', {
 
       await query('COMMIT')
 
-        // Award referral points to referrer on first booking
-      const referrerCheck = await query(
-        `SELECT c.referred_by, 
-          (SELECT COUNT(*) FROM bookings WHERE customer_id = $1 AND status = 'confirmed') as booking_count
-         FROM customers c WHERE c.id = $1`,
-        [customerId]
-      )
-      if (referrerCheck.rows.length > 0) {
-        const { referred_by, booking_count } = referrerCheck.rows[0]
-        if (referred_by && Number(booking_count) === 1) {
-          await query(
-            `UPDATE customers SET points_balance = points_balance + 50, updated_at = NOW() WHERE id = $1`,
-            [referred_by]
-          )
-          await query(
-            `INSERT INTO points_transactions (id, customer_id, type, points, description, created_at)
-             VALUES ($1, $2, 'earn-referral-reserve', 50, $3, NOW())`,
-            [uuidv4(), referred_by, `Referral: ${customerId} made their first booking`]
-          )
-        }
-      }
+       
 
       // Get updated balance
       const updatedCustomer = await query(
