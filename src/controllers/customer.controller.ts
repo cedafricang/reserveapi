@@ -305,22 +305,23 @@ export const getReferralInfo = async (
 
     // Count only referred customers who have made at least one confirmed booking
     const referralStats = await query(
-      `SELECT 
-        COUNT(DISTINCT c.id) as total_referrals,
-        COALESCE(SUM(pt.points), 0) as points_earned
-       FROM customers c
-       LEFT JOIN points_transactions pt 
-         ON pt.customer_id = $1 
-         AND pt.type = 'earn-referral-reserve'
-       WHERE c.referred_by = $1
-       AND EXISTS (
-         SELECT 1 FROM bookings b 
-         WHERE b.customer_id = c.id 
-         AND b.status = 'confirmed'
-       )`,
-      [customerId]
-    )
-
+  `SELECT 
+    COUNT(DISTINCT c.id) as total_referrals,
+    (
+      SELECT COALESCE(SUM(points), 0) 
+      FROM points_transactions 
+      WHERE customer_id = $1 
+      AND type = 'earn-referral-reserve'
+    ) as points_earned
+   FROM customers c
+   WHERE c.referred_by = $1
+   AND EXISTS (
+     SELECT 1 FROM bookings b 
+     WHERE b.customer_id = c.id 
+     AND b.status = 'confirmed'
+   )`,
+  [customerId]
+)
     const stats = referralStats.rows[0]
 
     res.status(200).json({
