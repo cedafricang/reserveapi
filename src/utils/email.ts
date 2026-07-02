@@ -372,3 +372,54 @@ function row(label: string, value: string): string {
     </tr>
   `
 }
+export const sendRescheduleEmail = async (
+  recipientEmail: string,
+  recipientName: string,
+  room: string,
+  oldDate: string,
+  oldTimeSlot: string,
+  newDate: string,
+  newTimeSlot: string,
+  isHost: boolean
+): Promise<void> => {
+  const roomLabel = roomDisplayNames[room] || room
+  const formatD = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+  await resend.emails.send({
+    from: `Soundhous Reserve <${FROM}>`,
+    to: recipientEmail,
+    subject: `Your booking has been rescheduled — ${roomLabel}`,
+    html: `
+      <div style="max-width:480px;margin:0 auto;font-family:'DM Sans',sans-serif;background:#0E0C0A;color:#F5F0E8;padding:48px 40px;border-radius:4px;">
+        <p style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:#F5F0E8;margin-bottom:8px;">
+          soundhous <span style="color:#C5855A;">reserve</span>
+        </p>
+        <div style="height:1px;background:rgba(197,133,90,0.15);margin:24px 0;"></div>
+        <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#C5855A;margin-bottom:16px;font-weight:500;">
+          Booking rescheduled
+        </p>
+        <h1 style="font-family:Georgia,serif;font-style:italic;font-size:26px;font-weight:400;color:#F5F0E8;margin-bottom:16px;line-height:1.2;">
+          ${isHost ? 'Your session has been moved.' : `${recipientName}, your session has been moved.`}
+        </h1>
+        <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.7;margin-bottom:24px;">
+          The booking for <strong style="color:#F5F0E8;">${roomLabel}</strong> has been rescheduled to a new date and time.
+        </p>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(197,133,90,0.15);border-radius:2px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(245,240,232,0.35);margin-bottom:12px;font-weight:500;">Previous date</p>
+          <p style="font-size:13px;color:rgba(245,240,232,0.4);margin-bottom:4px;text-decoration:line-through;">${formatD(oldDate)}</p>
+          <p style="font-size:13px;color:rgba(245,240,232,0.4);text-decoration:line-through;">${oldTimeSlot}</p>
+        </div>
+        <div style="background:rgba(197,133,90,0.06);border:1px solid rgba(197,133,90,0.25);border-radius:2px;padding:20px;margin-bottom:28px;">
+          <p style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#C5855A;margin-bottom:12px;font-weight:500;">New date</p>
+          <p style="font-size:15px;color:#F5F0E8;margin-bottom:4px;font-weight:500;">${formatD(newDate)}</p>
+          <p style="font-size:15px;color:#F5F0E8;">${newTimeSlot}</p>
+        </div>
+        <p style="font-size:12px;color:rgba(245,240,232,0.3);line-height:1.65;">
+          Your ticket number remains the same. Please keep it safe — you will need it at the door.
+        </p>
+        <div style="height:1px;background:rgba(197,133,90,0.1);margin:32px 0;"></div>
+        <p style="font-size:11px;color:rgba(245,240,232,0.18);">17 Adeyemo Alakija Street · Victoria Island · Lagos · reserve.soundhous.com</p>
+      </div>
+    `,
+  })
+}

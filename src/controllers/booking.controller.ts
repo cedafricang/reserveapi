@@ -6,7 +6,7 @@ import { awardPoints, checkAndUpgradeTier } from './customer.controller'
 
 import crypto from 'crypto'
 
-import { sendGuestRsvpEmail, sendTicketEmail, sendInternalBookingAlert } from '../utils/email'
+import { sendGuestRsvpEmail, sendTicketEmail, sendRescheduleEmail, sendInternalBookingAlert } from '../utils/email'
 
 // ── Constants ─────────────────────────────────────────────────
 const ROOM_PRICES: Record<string, number> = {
@@ -890,6 +890,56 @@ export const rescheduleBooking = async (
        RETURNING *`,
       [newDate, newTimeSlot, bookingId]
     )
+
+    // Get host details
+    const hostResult = await query(
+      'SELECT first_name, last_name, email FROM customers WHERE id = $1',
+      [customerId]
+    )
+    const host = hostResult.rows[0]
+    const oldDate = booking.booking_date
+    const oldTimeSlot = booking.time_slot
+
+    // Email host
+    await sendRescheduleEmail(
+      host.email,
+      `${host.first_name} ${host.last_name}`,
+      booking.room,
+      oldDate,
+      oldTimeSlot,
+      newDate,
+      newTimeSlot,
+      true
+    )
+
+    // Email all confirmed guests
+    const guestsResult = await query(
+      `SELECT full_name, email FROM booking_guests 
+       WHERE booking_id = $1 AND rsvp_status = 'accepted'`,
+      [bookingId]
+    )
+    for (const guest of guestsResult.rows) {
+      await sendRescheduleEmail(
+        guest.email,
+        guest.full_name,
+        booking.room,
+        oldDate,
+        oldTimeSlot,
+        newDate,
+        newTimeSlot,
+        false
+      )
+    }
+
+    // Internal team notification
+    await sendInternalBookingAlert('new-booking', {
+      customerName: `${host.first_name} ${host.last_name}`,
+      customerEmail: host.email,
+      room: booking.room,
+      date: newDate,
+      timeSlot: newTimeSlot,
+      paymentType: `rescheduled (was ${oldDate} ${oldTimeSlot})`,
+    })
 
     res.status(200).json({
       success: true,
