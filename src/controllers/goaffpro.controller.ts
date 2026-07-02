@@ -38,9 +38,42 @@ export const handleAffiliateOrderCreated = async (
     )
 
     if (customerResult.rows.length === 0) {
-      console.log(`GoAffPro: no Reserve customer found for affiliate email ${affiliateEmail}`)
-      return
-    }
+  console.log(`GoAffPro: no Reserve customer found for ${affiliateEmail} — creating pending record`)
+  
+  // Create offline account with pre-loaded points so they're ready when they sign up
+  const customerId = uuidv4()
+  const referralCode = `AFF${Math.floor(10000 + Math.random() * 90000)}`
+  
+  await query(
+    `INSERT INTO customers (
+      id, email, first_name, last_name, password_hash,
+      tier, points_balance, annual_spend,
+      complimentary_sessions_used_this_year,
+      referral_code, email_verified,
+      last_active_at, created_at, updated_at
+    ) VALUES (
+      $1, $2, 'Affiliate', 'Member', NULL,
+      'reserve-member', 50, 0, 0,
+      $3, false,
+      NOW(), NOW(), NOW()
+    ) ON CONFLICT (email) DO UPDATE SET
+      points_balance = customers.points_balance + 50,
+      updated_at = NOW()`,
+    [customerId, affiliateEmail.toLowerCase().trim(), referralCode]
+  )
+
+  await query(
+    `INSERT INTO points_transactions (
+      id, customer_id, type, points, description, created_at
+    ) VALUES ($1, 
+      (SELECT id FROM customers WHERE email = $2),
+      'earn-referral-product', 50, $3, NOW())`,
+    [uuidv4(), affiliateEmail.toLowerCase().trim(), `Product referral: Soundhous.com order ${orderId} — points pre-loaded`]
+  )
+
+  console.log(`GoAffPro: pre-loaded 50 points for ${affiliateEmail}`)
+  return
+}
 
     const customer = customerResult.rows[0]
 
