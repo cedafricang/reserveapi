@@ -6,7 +6,7 @@ import {
   createComplimentaryBooking,
   createPointsBooking,
   rescheduleBooking,
-  verifyIkoyiMembership,
+  
   getBooking,
   inviteGuests,
   getRsvpDetails,
@@ -21,7 +21,7 @@ const router = Router()
 
 // Public — check availability without login
 router.get('/availability', checkAvailability)
-router.post('/ikoyi/verify', verifyIkoyiMembership)
+
 
 // Protected — all booking actions require auth
 router.post('/cash', requireAuth, initiateCashBooking)
