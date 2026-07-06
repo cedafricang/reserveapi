@@ -616,6 +616,7 @@ await sendTicketEmail(
   `${hostInfo.first_name} ${hostInfo.last_name}`,
   true
 )
+console.log('Ticket number before alert:', ticketNumber)
 await sendInternalBookingAlert('new-booking', {
   customerName: `${hostInfo.first_name} ${hostInfo.last_name}`,
   customerEmail: hostInfo.email,
