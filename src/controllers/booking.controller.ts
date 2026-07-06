@@ -66,11 +66,44 @@ export const checkAvailability = async (
 
     const taken = bookedSlots.rows.map((r: { time_slot: string }) => r.time_slot)
 
-    // All possible slots per room
+    // Validate day of week — only Tue-Sun
+    const requestedDate = new Date(date + 'T12:00:00')
+    const dayOfWeek = requestedDate.getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+
+    if (dayOfWeek === 1) {
+      // Monday — closed
+      res.status(200).json({
+        success: true,
+        message: 'Availability retrieved.',
+        data: { room, date, slots: [], totalAvailable: 0, closed: true, reason: 'Soundhous Reserve is closed on Mondays.' },
+      })
+      return
+    }
+
+    // Enforce 2-day advance booking
+    const twoDaysFromNow = new Date()
+    twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2)
+    twoDaysFromNow.setHours(0, 0, 0, 0)
+
+    if (requestedDate < twoDaysFromNow) {
+      res.status(200).json({
+        success: true,
+        message: 'Availability retrieved.',
+        data: { room, date, slots: [], totalAvailable: 0, closed: true, reason: 'Bookings must be made at least 2 days in advance.' },
+      })
+      return
+    }
+
+    // Slots by day — Tue-Fri: 4pm-10pm, Sat-Sun: 10am-12am
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+
+    const WEEKDAY_SLOTS = ['4:00pm', '6:00pm', '8:00pm'] // Tue-Fri evening sessions
+    const WEEKEND_SLOTS = ['10:00am', '12:00pm', '2:00pm', '4:00pm', '6:00pm', '8:00pm', '10:00pm'] // Sat-Sun full day
+
     const ALL_SLOTS: Record<string, string[]> = {
-      'private-cinema': ['10:00am', '2:00pm', '6:00pm'],
-      'hi-fi-room': ['10:00am', '12:00pm', '2:00pm', '4:00pm', '6:00pm'],
-      'media-room': ['10:00am', '1:00pm', '4:00pm', '7:00pm'],
+      'private-cinema': isWeekend ? WEEKEND_SLOTS : WEEKDAY_SLOTS,
+      'hi-fi-room': isWeekend ? WEEKEND_SLOTS : WEEKDAY_SLOTS,
+      'media-room': isWeekend ? WEEKEND_SLOTS : WEEKDAY_SLOTS,
     }
 
     const slots = ALL_SLOTS[room as string].map(slot => ({
@@ -109,6 +142,33 @@ export const initiateCashBooking = async (
         success: false,
         message: 'Room, date, and time slot are required.',
       })
+      return
+    }
+    // Validate booking rules
+    const bookingDate = new Date(date + 'T12:00:00')
+    const dayOfWeek = bookingDate.getDay()
+
+    if (dayOfWeek === 1) {
+      res.status(400).json({ success: false, message: 'Soundhous Reserve is closed on Mondays. Please choose another day.' })
+      return
+    }
+
+    const twoDaysFromNow = new Date()
+    twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2)
+    twoDaysFromNow.setHours(0, 0, 0, 0)
+
+    if (bookingDate < twoDaysFromNow) {
+      res.status(400).json({ success: false, message: 'Bookings must be made at least 2 days in advance.' })
+      return
+    }
+
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    const validSlots = isWeekend
+      ? ['10:00am', '12:00pm', '2:00pm', '4:00pm', '6:00pm', '8:00pm', '10:00pm']
+      : ['4:00pm', '6:00pm', '8:00pm']
+
+    if (!validSlots.includes(timeSlot)) {
+      res.status(400).json({ success: false, message: 'Invalid time slot for the selected day.' })
       return
     }
 
@@ -431,6 +491,33 @@ export const createComplimentaryBooking = async (
       })
       return
     }
+    // Validate booking rules
+    const bookingDate = new Date(date + 'T12:00:00')
+    const dayOfWeek = bookingDate.getDay()
+
+    if (dayOfWeek === 1) {
+      res.status(400).json({ success: false, message: 'Soundhous Reserve is closed on Mondays. Please choose another day.' })
+      return
+    }
+
+    const twoDaysFromNow = new Date()
+    twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2)
+    twoDaysFromNow.setHours(0, 0, 0, 0)
+
+    if (bookingDate < twoDaysFromNow) {
+      res.status(400).json({ success: false, message: 'Bookings must be made at least 2 days in advance.' })
+      return
+    }
+
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    const validSlots = isWeekend
+      ? ['10:00am', '12:00pm', '2:00pm', '4:00pm', '6:00pm', '8:00pm', '10:00pm']
+      : ['4:00pm', '6:00pm', '8:00pm']
+
+    if (!validSlots.includes(timeSlot)) {
+      res.status(400).json({ success: false, message: 'Invalid time slot for the selected day.' })
+      return
+    }
 
     const COMPLIMENTARY_SESSIONS: Record<string, number> = {
       'reserve-member': 0,
@@ -615,6 +702,33 @@ export const createPointsBooking = async (
         success: false,
         message: 'Room, date, and time slot are required.',
       })
+      return
+    }
+    // Validate booking rules
+    const bookingDate = new Date(date + 'T12:00:00')
+    const dayOfWeek = bookingDate.getDay()
+
+    if (dayOfWeek === 1) {
+      res.status(400).json({ success: false, message: 'Soundhous Reserve is closed on Mondays. Please choose another day.' })
+      return
+    }
+
+    const twoDaysFromNow = new Date()
+    twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2)
+    twoDaysFromNow.setHours(0, 0, 0, 0)
+
+    if (bookingDate < twoDaysFromNow) {
+      res.status(400).json({ success: false, message: 'Bookings must be made at least 2 days in advance.' })
+      return
+    }
+
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    const validSlots = isWeekend
+      ? ['10:00am', '12:00pm', '2:00pm', '4:00pm', '6:00pm', '8:00pm', '10:00pm']
+      : ['4:00pm', '6:00pm', '8:00pm']
+
+    if (!validSlots.includes(timeSlot)) {
+      res.status(400).json({ success: false, message: 'Invalid time slot for the selected day.' })
       return
     }
 
