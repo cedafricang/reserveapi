@@ -19,6 +19,7 @@ app.set('trust proxy', 1)
 const PORT = process.env.PORT || 8080
 
 // ── Security middleware ───────────────────────────────────────
+
 app.use(helmet())
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -91,6 +92,7 @@ app.use('/api/bookings', bookingRoutes)
 app.use('/api/webhooks/shopify', shopifyRoutes)
 app.use('/api/webhooks/goaffpro', goaffproRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/clubs', clubRoutes)
 
 // ── 404 handler ───────────────────────────────────────────────
 app.use((_req, res) => {
