@@ -581,151 +581,168 @@ export const adjustPoints = async (
 }
 
 // ── GET CLUB MEMBERS ──────────────────────────────────────────
-export const getClubMembers = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+// ── CLUBS ─────────────────────────────────────────────────────
+
+export const createClub = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { clubSlug } = req.params
-    const page = Math.max(1, parseInt(req.query.page as string) || 1)
-    const limit = Math.min(100, parseInt(req.query.limit as string) || 20)
-    const offset = (page - 1) * limit
-
-    const clubResult = await query(
-      'SELECT * FROM clubs WHERE slug = $1',
-      [clubSlug]
-    )
-
-    if (clubResult.rows.length === 0) {
-      res.status(404).json({ success: false, message: 'Club not found.' })
+    const { name, description } = req.body
+    if (!name?.trim()) {
+      res.status(400).json({ success: false, message: 'Club name is required.' })
       return
     }
-
-    const club = clubResult.rows[0]
-
-    const [members, countResult, stats] = await Promise.all([
-      query(
-        `SELECT cm.*, c.email, c.first_name, c.last_name, c.tier
-         FROM club_members cm
-         LEFT JOIN customers c ON cm.customer_id = c.id
-         WHERE cm.club_id = $1
-         ORDER BY cm.created_at DESC
-         LIMIT $2 OFFSET $3`,
-        [club.id, limit, offset]
-      ),
-      query(
-        'SELECT COUNT(*) FROM club_members WHERE club_id = $1',
-        [club.id]
-      ),
-      query(
-        `SELECT
-           COUNT(*) as total_members,
-           SUM(CASE WHEN complimentary_used = true THEN 1 ELSE 0 END) as used_complimentary,
-           SUM(CASE WHEN customer_id IS NOT NULL THEN 1 ELSE 0 END) as converted_to_reserve
-         FROM club_members
-         WHERE club_id = $1`,
-        [club.id]
-      ),
-    ])
-
-    const total = parseInt(countResult.rows[0].count)
-
-    res.status(200).json({
-      success: true,
-      message: 'Club members retrieved.',
-      data: {
-        club: {
-          id: club.id,
-          name: club.name,
-          slug: club.slug,
-          discountPercent: club.discount_percent,
-          active: club.active,
-        },
-        stats: {
-          totalMembers: Number(stats.rows[0].total_members),
-          usedComplimentary: Number(stats.rows[0].used_complimentary),
-          convertedToReserve: Number(stats.rows[0].converted_to_reserve),
-        },
-        members: members.rows.map(m => ({
-          id: m.id,
-          membershipNumber: m.membership_number,
-          complimentaryUsed: m.complimentary_used,
-          complimentaryUsedAt: m.complimentary_used_at,
-          customerEmail: m.email,
-          customerName: m.first_name ? `${m.first_name} ${m.last_name}` : null,
-          customerTier: m.tier,
-          createdAt: m.created_at,
-        })),
-        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-      },
-    })
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const existing = await query('SELECT id FROM clubs WHERE slug = $1', [slug])
+    if (existing.rows.length > 0) {
+      res.status(409).json({ success: false, message: 'A club with this name already exists.' })
+      return
+    }
+    const result = await query(
+      `INSERT INTO clubs (id, name, description, slug, active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, true, NOW(), NOW()) RETURNING *`,
+      [uuidv4(), name.trim(), description?.trim() || null, slug]
+    )
+    res.status(201).json({ success: true, message: 'Club created.', data: { club: result.rows[0] } })
   } catch (err) {
-    console.error('Get club members error:', err)
+    console.error('Create club error:', err)
     res.status(500).json({ success: false, message: 'Something went wrong.' })
   }
 }
 
-// ── ADD CLUB MEMBER ───────────────────────────────────────────
-export const addClubMember = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getAllClubs = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { clubSlug } = req.params
-    const { membershipNumber } = req.body
+    const result = await query(
+      `SELECT c.*,
+        COUNT(cm.id) as total_ids,
+        COUNT(cm.id) FILTER (WHERE cm.claimed = true) as claimed_count
+       FROM clubs c
+       LEFT JOIN club_membership_ids cm ON c.id = cm.club_id
+       GROUP BY c.id
+       ORDER BY c.created_at DESC`
+    )
+    res.status(200).json({ success: true, data: { clubs: result.rows } })
+  } catch (err) {
+    console.error('Get clubs error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
 
-    if (!membershipNumber) {
-      res.status(400).json({
-        success: false,
-        message: 'Membership number is required.',
-      })
+export const addMembershipIds = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { clubId } = req.params
+    const { codes } = req.body // array of strings
+
+    if (!Array.isArray(codes) || codes.length === 0) {
+      res.status(400).json({ success: false, message: 'At least one membership code is required.' })
       return
     }
 
-    const clubResult = await query(
-      'SELECT id FROM clubs WHERE slug = $1',
-      [clubSlug]
-    )
-
-    if (clubResult.rows.length === 0) {
+    const club = await query('SELECT id FROM clubs WHERE id = $1', [clubId])
+    if (club.rows.length === 0) {
       res.status(404).json({ success: false, message: 'Club not found.' })
       return
     }
 
-    const clubId = clubResult.rows[0].id
+    const inserted: string[] = []
+    const duplicates: string[] = []
 
-    // Check if already exists
-    const existing = await query(
-      'SELECT id FROM club_members WHERE club_id = $1 AND membership_number ILIKE $2',
-      [clubId, membershipNumber.trim()]
+    for (const code of codes) {
+      const clean = code.trim().toUpperCase()
+      if (!clean) continue
+      try {
+        await query(
+          `INSERT INTO club_membership_ids (id, club_id, membership_code, claimed, created_at)
+           VALUES ($1, $2, $3, false, NOW())`,
+          [uuidv4(), clubId, clean]
+        )
+        inserted.push(clean)
+      } catch {
+        duplicates.push(clean)
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `${inserted.length} code(s) added.${duplicates.length > 0 ? ` ${duplicates.length} duplicate(s) skipped.` : ''}`,
+      data: { inserted, duplicates },
+    })
+  } catch (err) {
+    console.error('Add membership IDs error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
+
+export const getMembershipIds = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { clubId } = req.params
+    const result = await query(
+      `SELECT cm.*, c.first_name, c.last_name, c.email as customer_email
+       FROM club_membership_ids cm
+       LEFT JOIN customers c ON cm.claimed_by_customer_id = c.id
+       WHERE cm.club_id = $1
+       ORDER BY cm.created_at DESC`,
+      [clubId]
     )
+    res.status(200).json({
+      success: true,
+      data: {
+        ids: result.rows.map(r => ({
+          id: r.id,
+          code: r.membership_code,
+          claimed: r.claimed,
+          claimedAt: r.claimed_at,
+          claimedBy: r.claimed ? {
+            name: `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.customer_email,
+            email: r.customer_email,
+          } : null,
+        })),
+        total: result.rows.length,
+        claimed: result.rows.filter(r => r.claimed).length,
+        unclaimed: result.rows.filter(r => !r.claimed).length,
+      },
+    })
+  } catch (err) {
+    console.error('Get membership IDs error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
 
-    if (existing.rows.length > 0) {
-      res.status(409).json({
-        success: false,
-        message: 'This membership number is already registered.',
-      })
+export const exportMembershipIds = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { clubId } = req.params
+    const club = await query('SELECT name FROM clubs WHERE id = $1', [clubId])
+    if (club.rows.length === 0) {
+      res.status(404).json({ success: false, message: 'Club not found.' })
       return
     }
 
     const result = await query(
-      `INSERT INTO club_members (id, club_id, membership_number, created_at, updated_at)
-       VALUES ($1, $2, $3, NOW(), NOW())
-       RETURNING *`,
-      [uuidv4(), clubId, membershipNumber.trim().toUpperCase()]
+      `SELECT cm.membership_code, cm.claimed, cm.claimed_at,
+        c.first_name, c.last_name, c.email
+       FROM club_membership_ids cm
+       LEFT JOIN customers c ON cm.claimed_by_customer_id = c.id
+       WHERE cm.club_id = $1
+       ORDER BY cm.claimed DESC, cm.created_at ASC`,
+      [clubId]
     )
 
-    res.status(201).json({
-      success: true,
-      message: 'Club member added.',
-      data: { member: result.rows[0] },
-    })
+    const headers = ['Membership Code', 'Status', 'Claimed By', 'Email', 'Claimed At']
+    const rows = result.rows.map(r => [
+      r.membership_code,
+      r.claimed ? 'Claimed' : 'Unclaimed',
+      r.claimed ? `${r.first_name || ''} ${r.last_name || ''}`.trim() : '',
+      r.email || '',
+      r.claimed_at ? new Date(r.claimed_at).toLocaleDateString('en-GB') : '',
+    ])
+
+    const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    res.setHeader('Content-Type', 'text/csv')
+    res.setHeader('Content-Disposition', `attachment; filename="${club.rows[0].name}-membership-ids-${Date.now()}.csv"`)
+    res.send(csv)
   } catch (err) {
-    console.error('Add club member error:', err)
+    console.error('Export membership IDs error:', err)
     res.status(500).json({ success: false, message: 'Something went wrong.' })
   }
 }
-
 // ── REPORTS ───────────────────────────────────────────────────
 export const getReports = async (
   req: Request,

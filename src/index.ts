@@ -9,6 +9,7 @@ import bookingRoutes from './routes/booking.routes'
 import shopifyRoutes from './routes/shopify.routes'
 import goaffproRoutes from './routes/goaffpro.routes'
 import adminRoutes from './routes/admin.routes'
+import clubRoutes from './routes/club.routes'
 
 dotenv.config()
 

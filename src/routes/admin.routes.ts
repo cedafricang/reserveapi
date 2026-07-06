@@ -8,13 +8,16 @@ import {
   grantComplimentaryAccess,
   overrideTier,
   adjustPoints,
-  getClubMembers,
-  addClubMember,
   getReports,
   runAnnualReset,
   createOfflineCustomer,
   getAdminGuests,
   exportCSV,
+  createClub,
+  getAllClubs,
+  addMembershipIds,
+  getMembershipIds,
+  exportMembershipIds,
 } from '../controllers/admin.controller'
 import { requireAuth } from '../middleware/auth'
 import { requireAdmin } from '../middleware/adminAuth'
@@ -49,8 +52,12 @@ router.patch('/customers/:customerId/tier', overrideTier)
 router.patch('/customers/:customerId/points', adjustPoints)
 
 // Clubs
-router.get('/clubs/:clubSlug/members', getClubMembers)
-router.post('/clubs/:clubSlug/members', addClubMember)
+// Clubs
+router.post('/clubs', createClub)
+router.get('/clubs', getAllClubs)
+router.post('/clubs/:clubId/membership-ids', addMembershipIds)
+router.get('/clubs/:clubId/membership-ids', getMembershipIds)
+router.get('/clubs/:clubId/membership-ids/export', exportMembershipIds)
 
 // Reports
 router.get('/reports', getReports)
