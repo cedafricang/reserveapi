@@ -18,6 +18,10 @@ import {
 } from '../controllers/admin.controller'
 import { requireAuth } from '../middleware/auth'
 import { requireAdmin } from '../middleware/adminAuth'
+import {
+  // ...existing imports...
+  getBookingDetail,
+} from '../controllers/admin.controller'
 
 
 const router = Router()
@@ -36,6 +40,7 @@ router.get('/overview', getOverview)
 router.get('/bookings', getAllBookings)
 router.post('/bookings', adminCreateBooking)
 router.patch('/bookings/:bookingId/cancel', adminCancelBooking)
+router.get('/bookings/:bookingId', getBookingDetail)
 
 // Customers
 router.get('/customers', getAllCustomers)

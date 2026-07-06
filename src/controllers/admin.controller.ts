@@ -78,7 +78,7 @@ export const getOverview = async (
         })),
         recentBookings: recentBookings.rows.map(b => ({
           id: b.id,
-          customerName: `${b.first_name || ''} ${b.last_name || ''}`.trim(),
+          customerName: `${b.first_name || ''} ${b.last_name || ''}`.trim() || b.email,
           customerEmail: b.email,
           customerTier: b.tier,
           room: b.room,
@@ -160,7 +160,7 @@ export const getAllBookings = async (
       data: {
         bookings: bookings.rows.map(b => ({
           id: b.id,
-          customerName: `${b.first_name || ''} ${b.last_name || ''}`.trim(),
+          customerName: `${b.first_name || ''} ${b.last_name || ''}`.trim() || b.email,
           customerEmail: b.email,
           customerTier: b.tier,
           room: b.room,
@@ -1093,6 +1093,83 @@ export const exportCSV = async (
     }
   } catch (err) {
     console.error('Export CSV error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
+// ── GET SINGLE BOOKING DETAIL (admin) ────────────────────────
+export const getBookingDetail = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { bookingId } = req.params
+
+    const bookingResult = await query(
+      `SELECT b.*, 
+        c.first_name, c.last_name, c.email as customer_email, c.tier, c.phone,
+        c.points_balance, c.annual_spend
+       FROM bookings b
+       LEFT JOIN customers c ON b.customer_id = c.id
+       WHERE b.id = $1`,
+      [bookingId]
+    )
+
+    if (bookingResult.rows.length === 0) {
+      res.status(404).json({ success: false, message: 'Booking not found.' })
+      return
+    }
+
+    const b = bookingResult.rows[0]
+
+    // Get guests
+    const guestsResult = await query(
+      `SELECT id, full_name, email, rsvp_status, ticket_number, invited_at, responded_at
+       FROM booking_guests WHERE booking_id = $1 ORDER BY invited_at ASC`,
+      [bookingId]
+    )
+
+    res.status(200).json({
+      success: true,
+      data: {
+        booking: {
+          id: b.id,
+          room: b.room,
+          bookingDate: b.booking_date,
+          timeSlot: b.time_slot,
+          guestCount: b.guest_count,
+          paymentType: b.payment_type,
+          amountPaid: Number(b.amount_paid),
+          pointsUsed: Number(b.points_used),
+          refreshment: b.refreshment,
+          refreshmentAmount: Number(b.refreshment_amount),
+          status: b.status,
+          ticketNumber: b.ticket_number,
+          rescheduleCount: b.reschedule_count,
+          reschedulesRemaining: Math.max(0, 2 - b.reschedule_count),
+          createdAt: b.created_at,
+          updatedAt: b.updated_at,
+          customer: {
+            name: `${b.first_name || ''} ${b.last_name || ''}`.trim() || b.customer_email,
+            email: b.customer_email,
+            phone: b.phone,
+            tier: b.tier,
+            pointsBalance: Number(b.points_balance),
+            annualSpend: Number(b.annual_spend),
+          },
+          guests: guestsResult.rows.map(g => ({
+            id: g.id,
+            fullName: g.full_name,
+            email: g.email,
+            rsvpStatus: g.rsvp_status,
+            ticketNumber: g.ticket_number,
+            invitedAt: g.invited_at,
+            respondedAt: g.responded_at,
+          })),
+        },
+      },
+    })
+  } catch (err) {
+    console.error('Get booking detail error:', err)
     res.status(500).json({ success: false, message: 'Something went wrong.' })
   }
 }
