@@ -5,6 +5,7 @@ import {
   adminCreateBooking,
   adminCancelBooking,
   getAllCustomers,
+  getBookingDetail,
   grantComplimentaryAccess,
   overrideTier,
   adjustPoints,
@@ -21,10 +22,7 @@ import {
 } from '../controllers/admin.controller'
 import { requireAuth } from '../middleware/auth'
 import { requireAdmin } from '../middleware/adminAuth'
-import {
-  // ...existing imports...
-  getBookingDetail,
-} from '../controllers/admin.controller'
+
 
 
 const router = Router()
