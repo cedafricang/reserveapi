@@ -255,8 +255,10 @@ export const initiateCashBooking = async (
             timeSlot,
             guestCount: guestCount || 1,
             refreshment: refreshmentChoice,
-            roomPrice,
+            roomPrice: finalRoomPrice,
             refreshmentPrice,
+            discountPercentage,
+            discountAmount,
           },
         }),
       }
@@ -319,23 +321,25 @@ export const verifyAndConfirmBooking = async (
       }
     )
 
-    const paystackData = await paystackResponse.json() as {
-      status: boolean
-      data: {
-        status: string
-        amount: number
-        metadata: {
-          customerId: string
-          room: string
-          date: string
-          timeSlot: string
-          guestCount: number
-          refreshment: string
-          roomPrice: number
-          refreshmentPrice: number
-        }
-      }
+   const paystackData = await paystackResponse.json() as {
+  status: boolean
+  data: {
+    status: string
+    amount: number
+    metadata: {
+      customerId: string
+      room: string
+      date: string
+      timeSlot: string
+      guestCount: number
+      refreshment: string
+      roomPrice: number
+      refreshmentPrice: number
+      discountPercentage: number
+      discountAmount: number
     }
+  }
+}
 
     if (!paystackData.status || paystackData.data.status !== 'success') {
       res.status(402).json({
@@ -400,6 +404,13 @@ export const verifyAndConfirmBooking = async (
         Number(meta.refreshmentPrice),
       ]
     )
+    // Mark club first visit as used
+    if (meta.discountPercentage === 100) {
+      await query(
+        `UPDATE customers SET club_first_visit_used = true, updated_at = NOW() WHERE id = $1`,
+        [customerId]
+      )
+    }
     const ticketNumber = generateTicketNumber(meta.room)
 await query(`UPDATE bookings SET ticket_number = $1 WHERE id = $2`, [ticketNumber, bookingResult.rows[0].id])
 

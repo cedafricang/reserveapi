@@ -54,9 +54,11 @@ const sanitizeCustomer = (c: Record<string, unknown>) => ({
     'media-room': Math.max(0, POINTS_REDEMPTION['media-room'] - Number(c.points_balance)),
     'private-cinema': Math.max(0, POINTS_REDEMPTION['private-cinema'] - Number(c.points_balance)),
   },
-  earnRate: TIER_POINTS_RATE[c.tier as string] || 1,
-  lastActiveAt: c.last_active_at,
-  createdAt: c.created_at,
+ earnRate: TIER_POINTS_RATE[c.tier as string] || 1,
+lastActiveAt: c.last_active_at,
+clubId: c.club_id || null,
+clubFirstVisitUsed: c.club_first_visit_used || false,
+createdAt: c.created_at,
 })
 
 // ── GET PROFILE ───────────────────────────────────────────────
