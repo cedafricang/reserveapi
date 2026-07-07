@@ -230,6 +230,64 @@ export const initiateCashBooking = async (
 
     const finalRoomPrice = roomPrice - discountAmount
     const totalAmount = finalRoomPrice + refreshmentPrice    
+    // Club first visit — handle as free booking, no Paystack needed
+    if (discountPercentage === 100) {
+      const bookingId = uuidv4()
+      const bookingResult = await query(
+        `INSERT INTO bookings (
+          id, customer_id, room, booking_date, time_slot,
+          guest_count, payment_type, amount_paid,
+          refreshment, refreshment_amount, points_used, status,
+          discount_percentage, discount_amount,
+          reschedule_count, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5,
+          $6, 'club-member', 0,
+          $7, $8, 0, 'confirmed',
+          100, $9,
+          0, NOW(), NOW()
+        ) RETURNING *`,
+        [bookingId, customerId, room, date, timeSlot, guestCount || 1, refreshmentChoice, refreshmentPrice, discountAmount]
+      )
+
+      // Mark first visit used
+      await query(
+        `UPDATE customers SET club_first_visit_used = true, updated_at = NOW() WHERE id = $1`,
+        [customerId]
+      )
+
+      const ticketNumber = generateTicketNumber(room)
+      await query(`UPDATE bookings SET ticket_number = $1 WHERE id = $2`, [ticketNumber, bookingId])
+
+      const hostResult = await query('SELECT first_name, last_name, email FROM customers WHERE id = $1', [customerId])
+      const hostInfo = hostResult.rows[0]
+
+      await sendTicketEmail(hostInfo.email, `${hostInfo.first_name} ${hostInfo.last_name}`, ticketNumber, room, date, timeSlot, `${hostInfo.first_name} ${hostInfo.last_name}`, true)
+      await sendInternalBookingAlert('new-booking', {
+        customerName: `${hostInfo.first_name} ${hostInfo.last_name}`,
+        customerEmail: hostInfo.email,
+        room, date, timeSlot,
+        paymentType: 'club-member (complimentary first visit)',
+        ticketNumber,
+      })
+
+      res.status(201).json({
+        success: true,
+        message: 'Booking confirmed. Your complimentary first visit has been applied.',
+        data: {
+          complimentary: true,
+          booking: {
+            id: bookingResult.rows[0].id,
+            room: bookingResult.rows[0].room,
+            bookingDate: bookingResult.rows[0].booking_date,
+            timeSlot: bookingResult.rows[0].time_slot,
+            status: bookingResult.rows[0].status,
+            ticketNumber,
+          },
+        },
+      })
+      return
+    }
     
     const paystackReference = `RSV-${uuidv4().replace(/-/g, '').slice(0, 16).toUpperCase()}`
 
