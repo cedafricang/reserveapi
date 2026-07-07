@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { query } from '../db'
 import { AuthRequest } from '../middleware/auth'
 import { checkAndUpgradeTier } from './customer.controller'
+import { sendOfflineCustomerWelcome } from '../utils/email'
 
 
 // ── OVERVIEW / STATS ──────────────────────────────────────────
@@ -952,6 +953,16 @@ export const createOfflineCustomer = async (
       }
 
       const updated = await query('SELECT * FROM customers WHERE id = $1', [customerId])
+      // Notify existing customer that points were added
+      if (points > 0) {
+        const existingName = existing.rows[0].first_name || firstName.trim()
+        await sendOfflineCustomerWelcome(
+          emailLower,
+          existingName,
+          points,
+          notes || `${points} points have been added to your Reserve account.`
+        )
+      }
       res.status(200).json({
         success: true,
         message: `Existing account found. ${points > 0 ? `${points} points credited.` : 'No points added.'}`,
@@ -989,6 +1000,20 @@ export const createOfflineCustomer = async (
         [uuidv4(), customerId, points, notes || 'Offline purchase credit']
       )
     }
+
+    // Send welcome email to new offline customer
+    await sendOfflineCustomerWelcome(
+      emailLower,
+      firstName.trim(),
+      points,
+      notes
+    )
+
+    res.status(201).json({
+      success: true,
+      message: `Offline customer created.${points > 0 ? ` ${points} points pre-loaded.` : ''} A welcome email has been sent to ${emailLower}.`,
+      data: { customerId, email: emailLower, pointsCredited: points, wasExisting: false },
+    })
 
     res.status(201).json({
       success: true,

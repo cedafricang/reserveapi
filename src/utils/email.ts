@@ -423,3 +423,67 @@ export const sendRescheduleEmail = async (
     `,
   })
 }
+export const sendOfflineCustomerWelcome = async (
+  recipientEmail: string,
+  firstName: string,
+  pointsBalance: number,
+  notes?: string
+): Promise<void> => {
+  const signupUrl = `${FRONTEND_URL}/signup`
+
+  await resend.emails.send({
+    from: `Soundhous Reserve <${FROM}>`,
+    to: recipientEmail,
+    subject: `Your Soundhous Reserve account is ready`,
+    html: `
+      <div style="max-width:480px;margin:0 auto;font-family:'DM Sans',sans-serif;background:#0E0C0A;color:#F5F0E8;padding:48px 40px;border-radius:4px;">
+        <p style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:#F5F0E8;margin-bottom:8px;">
+          soundhous <span style="color:#C5855A;">reserve</span>
+        </p>
+        <div style="height:1px;background:rgba(197,133,90,0.15);margin:24px 0;"></div>
+        <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#C5855A;margin-bottom:16px;font-weight:500;">
+          You're invited
+        </p>
+        <h1 style="font-family:Georgia,serif;font-style:italic;font-size:28px;font-weight:400;color:#F5F0E8;margin-bottom:16px;line-height:1.2;">
+          Welcome, ${firstName}.
+        </h1>
+        <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.7;margin-bottom:24px;">
+          A Soundhous Reserve account has been created for you. Reserve is our private booking platform for the Soundhous Experience Centre — where you can book the Hi-Fi Room, Private Cinema, or Media Room for an immersive listening or viewing session.
+        </p>
+
+        ${pointsBalance > 0 ? `
+        <div style="background:rgba(197,133,90,0.06);border:1px solid rgba(197,133,90,0.2);border-radius:2px;padding:20px;margin-bottom:24px;text-align:center;">
+          <p style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(245,240,232,0.4);margin-bottom:8px;font-weight:500;">Points waiting for you</p>
+          <p style="font-family:Georgia,serif;font-style:italic;font-size:36px;color:#C5855A;margin:0;font-weight:400;">${pointsBalance.toLocaleString()}</p>
+          <p style="font-size:12px;color:rgba(245,240,232,0.35);margin-top:6px;">Redeemable for room bookings</p>
+        </div>
+        ` : ''}
+
+        ${notes ? `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(197,133,90,0.1);border-radius:2px;padding:16px;margin-bottom:24px;">
+          <p style="font-size:12px;color:rgba(245,240,232,0.45);line-height:1.65;margin:0;">${notes}</p>
+        </div>
+        ` : ''}
+
+        <p style="font-size:14px;color:rgba(245,240,232,0.55);line-height:1.7;margin-bottom:28px;">
+          To activate your account and start booking, simply sign up using this email address. Your points and history will be waiting.
+        </p>
+
+        <a href="${signupUrl}" style="display:inline-block;background:#C5855A;color:#0E0C0A;text-decoration:none;padding:14px 32px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;border-radius:2px;margin-bottom:24px;">
+          Activate your account →
+        </a>
+
+        <div style="margin-top:8px;padding:16px;border:1px solid rgba(197,133,90,0.1);border-radius:2px;background:rgba(255,255,255,0.02);">
+          <p style="font-size:12px;color:rgba(245,240,232,0.4);line-height:1.65;margin:0;">
+            <strong style="color:#F5F0E8;">How to book:</strong> Sign up → Browse rooms → Select your date and time → Pay securely or redeem your points → Receive your ticket by email.
+          </p>
+        </div>
+
+        <div style="height:1px;background:rgba(197,133,90,0.1);margin:32px 0;"></div>
+        <p style="font-size:11px;color:rgba(245,240,232,0.18);line-height:1.6;">
+          17 Adeyemo Alakija Street · Victoria Island · Lagos · reserve.soundhous.com
+        </p>
+      </div>
+    `,
+  })
+}
