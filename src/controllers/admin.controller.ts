@@ -1215,3 +1215,211 @@ export const getBookingDetail = async (
     res.status(500).json({ success: false, message: 'Something went wrong.' })
   }
 }
+// ── CHECK IN TICKET ───────────────────────────────────────────
+export const checkInTicket = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { ticketNumber } = req.body
+
+    if (!ticketNumber?.trim()) {
+      res.status(400).json({ success: false, message: 'Ticket number is required.' })
+      return
+    }
+
+    const code = ticketNumber.trim().toUpperCase()
+
+    // Check host ticket first
+    const hostTicket = await query(
+      `SELECT b.*, c.first_name, c.last_name, c.email
+       FROM bookings b
+       LEFT JOIN customers c ON b.customer_id = c.id
+       WHERE b.ticket_number = $1`,
+      [code]
+    )
+
+    if (hostTicket.rows.length > 0) {
+      const booking = hostTicket.rows[0]
+
+      if (booking.checked_in) {
+        res.status(409).json({
+          success: false,
+          message: `This ticket was already checked in at ${new Date(booking.checked_in_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}.`,
+          data: {
+            alreadyUsed: true,
+            checkedInAt: booking.checked_in_at,
+            name: `${booking.first_name} ${booking.last_name}`,
+            room: booking.room,
+            ticketNumber: code,
+          },
+        })
+        return
+      }
+
+      // Mark as checked in
+      await query(
+        `UPDATE bookings SET checked_in = true, checked_in_at = NOW() WHERE ticket_number = $1`,
+        [code]
+      )
+
+      res.status(200).json({
+        success: true,
+        message: 'Check-in successful.',
+        data: {
+          type: 'host',
+          name: `${booking.first_name} ${booking.last_name}`,
+          email: booking.email,
+          room: booking.room,
+          bookingDate: booking.booking_date,
+          timeSlot: booking.time_slot,
+          ticketNumber: code,
+          checkedInAt: new Date().toISOString(),
+        },
+      })
+      return
+    }
+
+    // Check guest ticket
+    const guestTicket = await query(
+      `SELECT bg.*, b.room, b.booking_date, b.time_slot,
+        c.first_name as host_first, c.last_name as host_last
+       FROM booking_guests bg
+       JOIN bookings b ON bg.booking_id = b.id
+       JOIN customers c ON b.customer_id = c.id
+       WHERE bg.ticket_number = $1`,
+      [code]
+    )
+
+    if (guestTicket.rows.length > 0) {
+      const guest = guestTicket.rows[0]
+
+      if (guest.checked_in) {
+        res.status(409).json({
+          success: false,
+          message: `This ticket was already checked in at ${new Date(guest.checked_in_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}.`,
+          data: {
+            alreadyUsed: true,
+            checkedInAt: guest.checked_in_at,
+            name: guest.full_name,
+            room: guest.room,
+            ticketNumber: code,
+          },
+        })
+        return
+      }
+
+      // Mark guest as checked in
+      await query(
+        `UPDATE booking_guests SET checked_in = true, checked_in_at = NOW() WHERE ticket_number = $1`,
+        [code]
+      )
+
+      res.status(200).json({
+        success: true,
+        message: 'Check-in successful.',
+        data: {
+          type: 'guest',
+          name: guest.full_name,
+          email: guest.email,
+          room: guest.room,
+          bookingDate: guest.booking_date,
+          timeSlot: guest.time_slot,
+          hostName: `${guest.host_first} ${guest.host_last}`,
+          ticketNumber: code,
+          checkedInAt: new Date().toISOString(),
+        },
+      })
+      return
+    }
+
+    // Not found
+    res.status(404).json({
+      success: false,
+      message: 'Invalid ticket. This ticket number does not exist.',
+      data: { notFound: true },
+    })
+  } catch (err) {
+    console.error('Check-in error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}
+
+// ── GET ALL TICKETS (admin) ───────────────────────────────────
+export const getAllTickets = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const filter = req.query.filter as string // 'all' | 'used' | 'unused'
+
+    let whereClause = ''
+    if (filter === 'used') whereClause = 'WHERE b.checked_in = true'
+    if (filter === 'unused') whereClause = 'WHERE b.checked_in = false'
+
+    const hostTickets = await query(
+      `SELECT 
+        b.ticket_number,
+        b.room,
+        b.booking_date,
+        b.time_slot,
+        b.checked_in,
+        b.checked_in_at,
+        b.status,
+        c.first_name || ' ' || c.last_name as holder_name,
+        c.email as holder_email,
+        'host' as ticket_type
+       FROM bookings b
+       LEFT JOIN customers c ON b.customer_id = c.id
+       WHERE b.ticket_number IS NOT NULL
+       ${filter === 'used' ? 'AND b.checked_in = true' : filter === 'unused' ? 'AND b.checked_in = false' : ''}
+       ORDER BY b.booking_date DESC`
+    )
+
+    const guestTickets = await query(
+      `SELECT
+        bg.ticket_number,
+        b.room,
+        b.booking_date,
+        b.time_slot,
+        bg.checked_in,
+        bg.checked_in_at,
+        b.status,
+        bg.full_name as holder_name,
+        bg.email as holder_email,
+        'guest' as ticket_type
+       FROM booking_guests bg
+       JOIN bookings b ON bg.booking_id = b.id
+       WHERE bg.ticket_number IS NOT NULL
+       ${filter === 'used' ? 'AND bg.checked_in = true' : filter === 'unused' ? 'AND bg.checked_in = false' : ''}
+       ORDER BY b.booking_date DESC`
+    )
+
+    const allTickets = [...hostTickets.rows, ...guestTickets.rows]
+      .sort((a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime())
+
+    res.status(200).json({
+      success: true,
+      data: {
+        tickets: allTickets.map(t => ({
+          ticketNumber: t.ticket_number,
+          room: t.room,
+          bookingDate: t.booking_date,
+          timeSlot: t.time_slot,
+          checkedIn: t.checked_in,
+          checkedInAt: t.checked_in_at,
+          status: t.status,
+          holderName: t.holder_name,
+          holderEmail: t.holder_email,
+          ticketType: t.ticket_type,
+        })),
+        total: allTickets.length,
+        used: allTickets.filter(t => t.checked_in).length,
+        unused: allTickets.filter(t => !t.checked_in).length,
+      },
+    })
+  } catch (err) {
+    console.error('Get tickets error:', err)
+    res.status(500).json({ success: false, message: 'Something went wrong.' })
+  }
+}

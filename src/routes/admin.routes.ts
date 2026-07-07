@@ -16,6 +16,8 @@ import {
   exportCSV,
   createClub,
   getAllClubs,
+  checkInTicket,
+  getAllTickets,
   addMembershipIds,
   getMembershipIds,
   exportMembershipIds,

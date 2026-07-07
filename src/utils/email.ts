@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-
+import QRCode from 'qrcode'
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = process.env.RESEND_FROM_EMAIL || 'noreply@reserve.soundhous.com'
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000'
@@ -259,7 +259,8 @@ export const sendTicketEmail = async (
           <tr>
             <td style="padding:24px 28px;background:rgba(197,133,90,0.05);text-align:center;">
               <p style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#F5F0E8; margin:0 0 8px;">Ticket number</p>
-              <p style="font-family:'DM Mono',monospace;font-size:22px;letter-spacing:0.12em;color:#F5F0E8;margin:0;font-weight:600;">${ticketNumber}</p>
+             <p style="font-family:'DM Mono',monospace;font-size:22px;letter-spacing:0.12em;color:#C5855A;margin:0 0 16px;font-weight:600;">${ticketNumber}</p>
+              <img src="${await QRCode.toDataURL(ticketNumber, { width: 160, margin: 1, color: { dark: '#C5855A', light: '#16130D' } })}" alt="Ticket QR Code" width="160" height="160" style="display:block;margin:0 auto;border-radius:4px;" />
             </td>
           </tr>
         </table>
