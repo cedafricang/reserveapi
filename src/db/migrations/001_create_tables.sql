@@ -108,38 +108,31 @@ CREATE INDEX IF NOT EXISTS idx_tier_history_customer ON tier_history(customer_id
 
 -- ── CLUBS ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS clubs (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name             VARCHAR(100) NOT NULL,
-  slug             VARCHAR(50) UNIQUE NOT NULL,
-  discount_percent INTEGER NOT NULL DEFAULT 20,
-  active           BOOLEAN NOT NULL DEFAULT false,
-  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  slug VARCHAR(100) NOT NULL UNIQUE,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Seed the three clubs
-INSERT INTO clubs (name, slug, discount_percent, active) VALUES
-  ('Ikoyi Club',  'ikoyi', 20, true),
-  ('Polo Club',   'polo',  20, false),
-  ('MECO Club',   'meco',  20, false)
-ON CONFLICT (slug) DO NOTHING;
-
--- ── CLUB MEMBERS ──────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS club_members (
-  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  club_id              UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
-  membership_number    VARCHAR(50) NOT NULL,
-  customer_id          UUID REFERENCES customers(id) ON DELETE SET NULL,
-  complimentary_used   BOOLEAN NOT NULL DEFAULT false,
-  complimentary_used_at TIMESTAMPTZ,
-  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (club_id, membership_number)
+CREATE TABLE IF NOT EXISTS club_membership_ids (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  membership_code VARCHAR(100) NOT NULL,
+  claimed BOOLEAN NOT NULL DEFAULT false,
+  claimed_by_customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+  claimed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(club_id, membership_code)
 );
 
-CREATE INDEX IF NOT EXISTS idx_club_members_club      ON club_members(club_id);
-CREATE INDEX IF NOT EXISTS idx_club_members_number    ON club_members(membership_number);
-CREATE INDEX IF NOT EXISTS idx_club_members_customer  ON club_members(customer_id);
+CREATE INDEX IF NOT EXISTS idx_club_membership_ids_club_id ON club_membership_ids(club_id);
+CREATE INDEX IF NOT EXISTS idx_club_membership_ids_code ON club_membership_ids(membership_code);
+
+
+
 
 -- ── PENDING REFERRAL POINTS ───────────────────────────────────
 -- Stores GoAffPro referral points for affiliates

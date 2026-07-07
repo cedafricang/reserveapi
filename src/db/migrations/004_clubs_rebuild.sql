@@ -1,9 +1,8 @@
--- Drop existing club tables
+-- Drop old club tables
 DROP TABLE IF EXISTS club_members CASCADE;
-DROP TABLE IF EXISTS clubs CASCADE;
 
 -- Create new clubs table
-CREATE TABLE clubs (
+CREATE TABLE IF NOT EXISTS clubs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -14,7 +13,7 @@ CREATE TABLE clubs (
 );
 
 -- Create membership IDs table
-CREATE TABLE club_membership_ids (
+CREATE TABLE IF NOT EXISTS club_membership_ids (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
   membership_code VARCHAR(100) NOT NULL,
@@ -31,7 +30,7 @@ ALTER TABLE customers
   ADD COLUMN IF NOT EXISTS club_membership_code VARCHAR(100),
   ADD COLUMN IF NOT EXISTS club_first_visit_used BOOLEAN NOT NULL DEFAULT false;
 
--- Add discount column to bookings
+-- Add discount columns to bookings
 ALTER TABLE bookings
   ADD COLUMN IF NOT EXISTS discount_percentage INTEGER NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS discount_amount INTEGER NOT NULL DEFAULT 0;
