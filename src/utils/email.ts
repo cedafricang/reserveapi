@@ -260,7 +260,7 @@ export const sendTicketEmail = async (
             <td style="padding:24px 28px;background:rgba(197,133,90,0.05);text-align:center;">
               <p style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#F5F0E8; margin:0 0 8px;">Ticket number</p>
              <p style="font-family:'DM Mono',monospace;font-size:22px;letter-spacing:0.12em;color:#C5855A;margin:0 0 16px;font-weight:600;">${ticketNumber}</p>
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${ticketNumber}&bgcolor=16130D&color=C5855A&margin=8" alt="Ticket QR Code" width="160" height="160" style="display:block;margin:0 auto;border-radius:4px;" />
+             <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${ticketNumber}&bgcolor=ffffff&color=000000&margin=10"
             </td>
           </tr>
         </table>
