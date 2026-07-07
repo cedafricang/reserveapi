@@ -35,6 +35,9 @@ router.use(requireAdmin)
 router.post('/customers/create-offline', requireAdmin, createOfflineCustomer)
 router.get('/guests', requireAdmin, getAdminGuests)
 router.get('/export', requireAdmin, exportCSV)
+// Check-in & Tickets
+router.post('/checkin', checkInTicket)
+router.get('/tickets', getAllTickets)
 
 // Overview
 router.get('/overview', getOverview)
