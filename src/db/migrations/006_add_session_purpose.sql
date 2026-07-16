@@ -1,0 +1,1 @@
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS session_purpose VARCHAR(100);

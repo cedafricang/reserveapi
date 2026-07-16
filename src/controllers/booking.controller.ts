@@ -133,7 +133,7 @@ export const initiateCashBooking = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { room, date, timeSlot, guestCount, refreshment } = req.body
+    const { room, date, timeSlot, guestCount, refreshment, sessionPurpose } = req.body
     const customerId = req.customer?.customerId
 
     // Validate
@@ -317,6 +317,7 @@ export const initiateCashBooking = async (
             refreshmentPrice,
             discountPercentage,
             discountAmount,
+            sessionPurpose: sessionPurpose || 'Not specified',
           },
         }),
       }
@@ -395,6 +396,7 @@ export const verifyAndConfirmBooking = async (
       refreshmentPrice: number
       discountPercentage: number
       discountAmount: number
+       sessionPurpose: string
     }
   }
 }
@@ -442,11 +444,13 @@ export const verifyAndConfirmBooking = async (
         id, customer_id, room, booking_date, time_slot,
         guest_count, payment_type, amount_paid, paystack_reference,
         refreshment, refreshment_amount, points_used, status,
+        session_purpose,
         reschedule_count, created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, 'cash', $7, $8,
         $9, $10, 0, 'confirmed',
+        $11,
         0, NOW(), NOW()
       ) RETURNING *`,
       [
@@ -456,10 +460,11 @@ export const verifyAndConfirmBooking = async (
         meta.date,
         meta.timeSlot,
         meta.guestCount || 1,
-       Number(meta.roomPrice) + Number(meta.refreshmentPrice),
+        Number(meta.roomPrice) + Number(meta.refreshmentPrice),
         reference,
         meta.refreshment,
         Number(meta.refreshmentPrice),
+        meta.sessionPurpose || 'Not specified',
       ]
     )
     // Mark club first visit as used
@@ -493,6 +498,7 @@ await sendInternalBookingAlert('new-booking', {
   timeSlot: meta.timeSlot,
   paymentType: 'cash',
   ticketNumber,
+ sessionPurpose: meta.sessionPurpose || 'Not specified',
 })
     
 
@@ -568,7 +574,7 @@ export const createComplimentaryBooking = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { room, date, timeSlot, guestCount, refreshment } = req.body
+    const { room, date, timeSlot, guestCount, refreshment, sessionPurpose } = req.body
     const customerId = req.customer?.customerId
 
     if (!room || !date || !timeSlot) {
@@ -775,7 +781,7 @@ export const createPointsBooking = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { room, date, timeSlot, guestCount, refreshment } = req.body
+    const { room, date, timeSlot, guestCount, refreshment, sessionPurpose } = req.body
     const customerId = req.customer?.customerId
 
     if (!room || !date || !timeSlot) {

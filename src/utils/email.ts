@@ -302,6 +302,7 @@ export const sendInternalBookingAlert = async (
     ticketNumber?: string
     guestName?: string
     guestEmail?: string
+    sessionPurpose?: string
   }
 ): Promise<void> => {
   const roomLabel = roomDisplayNames[details.room] || details.room
@@ -322,6 +323,7 @@ export const sendInternalBookingAlert = async (
         ${row('Booker', `${details.customerName} &lt;${details.customerEmail}&gt;`)}
         ${row('Payment type', details.paymentType || '—')}
         ${row('Ticket number', details.ticketNumber || '—')}
+        ${row('Session purpose', details.sessionPurpose || '—')}
       </table>
     `,
     'rsvp-accepted': `
