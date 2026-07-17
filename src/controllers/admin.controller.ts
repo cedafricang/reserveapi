@@ -139,7 +139,7 @@ export const getAllBookings = async (
 
     const [bookings, countResult] = await Promise.all([
       query(
-        `SELECT b.*, c.first_name, c.last_name, c.email, c.tier
+        `SELECT b.*, c.first_name, c.last_name, c.email, c.tier, c.phone
          FROM bookings b
          LEFT JOIN customers c ON b.customer_id = c.id
          ${whereClause}
