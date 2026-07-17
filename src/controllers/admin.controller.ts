@@ -176,6 +176,7 @@ export const getAllBookings = async (
           status: b.status,
           rescheduleCount: b.reschedule_count,
           sessionPurpose: b.session_purpose,
+          customerPhone: b.phone,
           createdAt: b.created_at,
         })),
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
